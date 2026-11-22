@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { 
-  X, 
-  UserPlus, 
-  Loader2, 
-  ShieldCheck, 
-  Dices, 
-  Globe, 
-  Apple, 
-  Cat, 
+import {
+  X,
+  UserPlus,
+  Loader2,
+  ShieldCheck,
+  Dices,
+  Globe,
+  Apple,
+  Cat,
   Swords,
   Lock,
   ChevronDown,
@@ -54,7 +54,7 @@ export const AddPersonModal: React.FC<Props> = ({ isOpen, onClose, onPersonCreat
   const [relationshipType, setRelationshipType] = useState("Friend");
   const [duration, setDuration] = useState("1 year");
   const [notes, setNotes] = useState("");
-  
+
   // Privacy Steganography / Proxy Codename State
   const [selectedCategory, setSelectedCategory] = useState<"countries" | "fruits" | "animals" | "anime" | "custom">("countries");
   const [alias, setAlias] = useState("Argentina");
@@ -127,13 +127,13 @@ export const AddPersonModal: React.FC<Props> = ({ isOpen, onClose, onPersonCreat
   };
 
   const modalContent = (
-    <div 
+    <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-stone-950/65 backdrop-blur-xs animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div 
+      <div
         className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-stone-200/90 flex flex-col max-h-[88vh] overflow-hidden animate-modal-pop"
         onClick={(e) => e.stopPropagation()}
       >
@@ -170,7 +170,7 @@ export const AddPersonModal: React.FC<Props> = ({ isOpen, onClose, onPersonCreat
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Bharath, Rahul, Priya, Alex"
+              placeholder="e.g. elon, mark, sundhar, larry"
               className="w-full px-3 py-2 border border-stone-200 rounded-xl text-xs font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-900 bg-stone-50/40 transition-all"
             />
           </div>
@@ -273,11 +273,10 @@ export const AddPersonModal: React.FC<Props> = ({ isOpen, onClose, onPersonCreat
                       key={cat}
                       type="button"
                       onClick={() => setSelectedCategory(cat)}
-                      className={`py-1 px-0.5 rounded-lg capitalize transition-all truncate ${
-                        selectedCategory === cat
+                      className={`py-1 px-0.5 rounded-lg capitalize transition-all truncate ${selectedCategory === cat
                           ? "bg-white text-stone-950 shadow-2xs font-bold"
                           : "hover:text-stone-950"
-                      }`}
+                        }`}
                     >
                       {cat === "countries" && "🌍 Countries"}
                       {cat === "fruits" && "🍎 Fruits"}
@@ -298,11 +297,10 @@ export const AddPersonModal: React.FC<Props> = ({ isOpen, onClose, onPersonCreat
                           key={item}
                           type="button"
                           onClick={() => setAlias(item)}
-                          className={`text-[10px] px-2 py-0.5 rounded-lg border shrink-0 transition-all ${
-                            isSelected
+                          className={`text-[10px] px-2 py-0.5 rounded-lg border shrink-0 transition-all ${isSelected
                               ? "bg-stone-900 text-stone-50 border-stone-900 font-bold shadow-2xs"
                               : "bg-white text-stone-700 hover:bg-stone-100/80 border-stone-200"
-                          }`}
+                            }`}
                         >
                           {item}
                         </button>
