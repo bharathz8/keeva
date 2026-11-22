@@ -1,0 +1,20 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: keeva-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - ENVIRONMENT=development
+      - USE_MOCK_AUTH_IN_DEV=true
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/serviceAccountKey.json
+      - FIREBASE_SERVICE_ACCOUNT_PATH=/app/serviceAccountKey.json
+    restart: unless-stopped

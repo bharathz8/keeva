@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check authentication
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the user is the owner of the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper function to verify incoming data has matching userId
+    function isValidOwnerOnCreate() {
+      return isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // People collection
+    match /people/{personId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isValidOwnerOnCreate();
+    }
+
+    // Relationships collection
+    match /relationships/{relationshipId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isValidOwnerOnCreate();
+    }
+
+    // Relationship events collection
+    match /relationship_events/{eventId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isValidOwnerOnCreate();
+    }
+
+    // Relationship contexts collection
+    match /relationship_contexts/{contextId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isValidOwnerOnCreate();
+    }
+
+    // Decisions collection
+    match /decisions/{decisionId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isValidOwnerOnCreate();
+    }
+
+    // Decision reflections collection
+    match /decision_reflections/{reflectionId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isValidOwnerOnCreate();
+    }
+
+    // Decision outcomes collection
+    match /decision_outcomes/{outcomeId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isValidOwnerOnCreate();
+    }
+
+    // Agent sessions collection
+    match /agent_sessions/{sessionId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isValidOwnerOnCreate();
+    }
+  }
+}
