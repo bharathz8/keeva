@@ -1,7 +1,7 @@
 # Steganographic Privacy & Shoulder-Surfer Cloaking Vault
 
 ## Overview
-Relationship Intelligence AI operates on sensitive interpersonal memories, conflict histories, and longitudinal dynamics. When using the application in public environments (e.g., coffee shops, open offices, commuter transit, co-working spaces), passersby or "shoulder-surfers" glancing at the screen might see real names (e.g., *"Rahul"*, *"Bharath"*, *"Priya"*, *"Alex"*), compromising user confidentiality.
+Relationship Intelligence AI operates on sensitive interpersonal memories, conflict histories, and longitudinal dynamics. When using the application in public environments (e.g., coffee shops, open offices, commuter transit, co-working spaces), passersby or "shoulder-surfers" glancing at the screen might see real names (e.g., *"elon"*, *"mark"*, *"bill"*, *"sundhar"*), compromising user confidentiality.
 
 The **Steganographic Privacy & Shoulder-Surfer Cloaking Vault** solves this problem by masking real identities behind plausible, innocuous codenames across predefined or custom categories.
 
