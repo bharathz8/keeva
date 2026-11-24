@@ -12,18 +12,36 @@ import {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
 
-let currentAuthToken: string = "demo-user-123";
+let currentAuthToken: string | null = null;
 
 export function setApiAuthToken(token: string | null) {
-  if (token) {
-    currentAuthToken = token;
-  } else {
-    currentAuthToken = "demo-user-123";
-  }
+  currentAuthToken = token;
 }
 
-export function getApiAuthToken(): string {
+export function getApiAuthToken(): string | null {
   return currentAuthToken;
+}
+
+export async function getValidAuthToken(): Promise<string | null> {
+  if (currentAuthToken) return currentAuthToken;
+  if (typeof window !== "undefined") {
+    try {
+      const { auth } = await import("./firebase");
+      if (auth) {
+        if (typeof auth.authStateReady === "function") {
+          await auth.authStateReady();
+        }
+        if (auth.currentUser) {
+          const token = await auth.currentUser.getIdToken();
+          currentAuthToken = token;
+          return token;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not retrieve auth token:", e);
+    }
+  }
+  return null;
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -32,7 +50,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers.set("Content-Type", "application/json");
   }
   if (!headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${currentAuthToken}`);
+    const token = await getValidAuthToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    } else {
+      throw new Error("Missing Authorization: Please sign in to access relationship data.");
+    }
   }
 
   const url = `${BACKEND_URL}${endpoint}`;

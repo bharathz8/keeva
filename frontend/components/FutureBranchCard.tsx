@@ -20,27 +20,27 @@ export const FutureBranchCard: React.FC<Props> = ({
   return (
     <div
       onClick={onSelect}
-      className={`border rounded-2xl p-5 transition-all duration-200 cursor-pointer text-left flex flex-col justify-between group ${
+      className={`border rounded-2xl p-4 sm:p-5 transition-all duration-200 cursor-pointer text-left flex flex-col justify-between group ${
         isSelected
-          ? "bg-stone-900 text-stone-100 border-stone-900 shadow-md ring-2 ring-amber-400/40 -translate-y-0.5"
-          : "bg-white hover:bg-stone-50/90 text-stone-900 border-stone-200/90 shadow-2xs hover:border-stone-300 hover:shadow-xs"
+          ? "bg-stone-900 text-stone-100 border-stone-900 shadow-md ring-2 ring-amber-400/30 -translate-y-0.5"
+          : "bg-white hover:bg-stone-50/80 text-stone-900 border-stone-200/90 shadow-2xs hover:border-stone-300"
       }`}
     >
       <div>
         {/* Top Header */}
         <div className="flex items-start justify-between gap-2 mb-2.5">
           <span
-            className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md ${
+            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
               isSelected
                 ? "bg-stone-800 text-amber-300 border border-stone-700"
-                : "bg-stone-100 text-stone-700 border border-stone-200/60"
+                : "bg-stone-100 text-stone-700 border border-stone-200/70"
             }`}
           >
             Path {index + 1}
           </span>
 
           <span
-            className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full capitalize ${
+            className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize ${
               branch.reversibility === "low"
                 ? isSelected
                   ? "bg-rose-950/80 text-rose-300 border border-rose-800/80"
@@ -56,14 +56,14 @@ export const FutureBranchCard: React.FC<Props> = ({
         </div>
 
         {/* Action Title */}
-        <h4 className="font-bold text-sm leading-snug mb-3">
+        <h4 className="font-bold text-sm leading-snug mb-3 text-stone-950 dark:text-stone-100">
           {branch.action}
         </h4>
 
         {/* Possible Consequences */}
-        <div className="space-y-2 mb-3.5">
+        <div className="space-y-1.5 mb-3.5">
           <p
-            className={`text-[10px] font-bold uppercase tracking-wider ${
+            className={`text-[10px] font-semibold uppercase tracking-wider ${
               isSelected ? "text-stone-400" : "text-stone-500"
             }`}
           >
@@ -77,10 +77,10 @@ export const FutureBranchCard: React.FC<Props> = ({
                   isSelected ? "text-stone-300" : "text-stone-700"
                 }`}
               >
-                <span className={`text-xs mt-0.5 ${isSelected ? "text-amber-400" : "text-amber-600"}`}>
+                <span className={`text-xs mt-0.5 shrink-0 ${isSelected ? "text-amber-400" : "text-amber-600"}`}>
                   &bull;
                 </span>
-                <span className="leading-relaxed">{c}</span>
+                <span className="leading-relaxed font-normal">{c}</span>
               </li>
             ))}
           </ul>
@@ -89,13 +89,13 @@ export const FutureBranchCard: React.FC<Props> = ({
         {/* Underlying Assumptions */}
         {branch.assumptions.length > 0 && (
           <div
-            className={`pt-3 border-t text-[11px] leading-relaxed ${
+            className={`pt-2.5 border-t text-[11px] leading-relaxed ${
               isSelected
                 ? "border-stone-800 text-stone-400"
                 : "border-stone-100 text-stone-500"
             }`}
           >
-            <span className="font-semibold">Assumes: </span>
+            <span className="font-semibold text-stone-400">Assumes: </span>
             <span>{branch.assumptions.join(", ")}</span>
           </div>
         )}

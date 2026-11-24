@@ -16,7 +16,6 @@ interface AuthUser {
   uid: string;
   email: string | null;
   displayName: string | null;
-  isDemoUser: boolean;
 }
 
 interface AuthContextType {
@@ -25,8 +24,11 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   signupWithEmail: (email: string, pass: string) => Promise<void>;
-  loginAsDemoUser: () => void;
   logout: () => Promise<void>;
+  isAuthModalOpen: boolean;
+  openAuthModal: (mode?: "signin" | "signup") => void;
+  closeAuthModal: () => void;
+  authModalMode: "signin" | "signup";
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -35,82 +37,80 @@ const AuthContext = createContext<AuthContextType>({
   loginWithGoogle: async () => {},
   loginWithEmail: async () => {},
   signupWithEmail: async () => {},
-  loginAsDemoUser: () => {},
   logout: async () => {},
+  isAuthModalOpen: false,
+  openAuthModal: () => {},
+  closeAuthModal: () => {},
+  authModalMode: "signin",
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">("signin");
+
+  const openAuthModal = (mode: "signin" | "signup" = "signin") => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
+  };
 
   useEffect(() => {
-    // Check local storage for persistent demo mode
-    const storedDemo = typeof window !== "undefined" ? localStorage.getItem("demo_user_active") : null;
-    if (storedDemo === "true") {
-      setUser({
-        uid: "demo-user-123",
-        email: "demo@relationship-intelligence.local",
-        displayName: "Demo Reviewer",
-        isDemoUser: true
-      });
-      setApiAuthToken("demo-user-123");
-      setLoading(false);
-      return;
+    // Clean up any legacy demo state from previous sessions
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("demo_user_active");
+      localStorage.removeItem("keeva_logged_out");
     }
 
     try {
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
         if (firebaseUser) {
-          const token = await firebaseUser.getIdToken();
-          setApiAuthToken(token);
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
-            isDemoUser: false
-          });
+          try {
+            const token = await firebaseUser.getIdToken();
+            setApiAuthToken(token);
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
+            });
+          } catch (tokenErr) {
+            console.warn("Error retrieving Firebase token:", tokenErr);
+            setUser(null);
+            setApiAuthToken(null);
+          }
         } else {
-          // If not signed in to Firebase and no demo, default to demo user for smooth developer experience
-          setUser({
-            uid: "demo-user-123",
-            email: "demo@relationship-intelligence.local",
-            displayName: "Demo User",
-            isDemoUser: true
-          });
-          setApiAuthToken("demo-user-123");
+          setUser(null);
+          setApiAuthToken(null);
         }
         setLoading(false);
       });
 
       return () => unsubscribe();
-    } catch {
-      // Default to demo mode if Firebase client fails
-      setUser({
-        uid: "demo-user-123",
-        email: "demo@relationship-intelligence.local",
-        displayName: "Demo User",
-        isDemoUser: true
-      });
-      setApiAuthToken("demo-user-123");
+    } catch (err) {
+      console.warn("Firebase auth listener error:", err);
+      setUser(null);
+      setApiAuthToken(null);
       setLoading(false);
     }
   }, []);
 
   const loginWithGoogle = async () => {
     try {
-      localStorage.removeItem("demo_user_active");
       const res = await signInWithPopup(auth, googleProvider);
       const token = await res.user.getIdToken();
       setApiAuthToken(token);
     } catch (err: any) {
-      console.warn("Firebase Google login error, falling back to demo session:", err);
-      loginAsDemoUser();
+      console.warn("Firebase Google login error:", err);
+      throw err;
     }
   };
 
   const loginWithEmail = async (email: string, pass: string) => {
     try {
-      localStorage.removeItem("demo_user_active");
       const res = await signInWithEmailAndPassword(auth, email, pass);
       const token = await res.user.getIdToken();
       setApiAuthToken(token);
@@ -122,7 +122,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signupWithEmail = async (email: string, pass: string) => {
     try {
-      localStorage.removeItem("demo_user_active");
       const res = await createUserWithEmailAndPassword(auth, email, pass);
       const token = await res.user.getIdToken();
       setApiAuthToken(token);
@@ -132,23 +131,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginAsDemoUser = () => {
-    localStorage.setItem("demo_user_active", "true");
-    const demo = {
-      uid: "demo-user-123",
-      email: "demo@relationship-intelligence.local",
-      displayName: "Demo Reviewer",
-      isDemoUser: true
-    };
-    setUser(demo);
-    setApiAuthToken("demo-user-123");
-  };
-
   const logout = async () => {
-    localStorage.removeItem("demo_user_active");
     try {
       await signOut(auth);
-    } catch {}
+    } catch (err) {
+      console.warn("Sign out error:", err);
+    }
     setUser(null);
     setApiAuthToken(null);
   };
@@ -161,8 +149,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         loginWithEmail,
         signupWithEmail,
-        loginAsDemoUser,
-        logout
+        logout,
+        isAuthModalOpen,
+        openAuthModal,
+        closeAuthModal,
+        authModalMode,
       }}
     >
       {children}

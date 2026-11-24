@@ -16,23 +16,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="overflow-x-hidden max-w-full">
       <body
         suppressHydrationWarning
-        className="min-h-screen bg-stone-50/50 text-stone-900 font-sans antialiased selection:bg-amber-100 selection:text-amber-900"
+        className="min-h-screen max-w-full overflow-x-hidden bg-stone-50/50 text-stone-900 font-sans antialiased selection:bg-amber-100 selection:text-amber-900"
       >
         <AuthProvider>
           <PrivacyProvider>
-            <div className="min-h-screen flex flex-col">
+            <div className="min-h-screen flex flex-col w-full max-w-full overflow-x-hidden">
               <Suspense fallback={<div className="h-16 border-b border-stone-200 bg-stone-50" />}>
                 <Navbar />
               </Suspense>
-              <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-20 md:pb-8">
                 <Suspense fallback={<div className="py-20 text-center text-xs text-stone-400">Loading...</div>}>
                   {children}
                 </Suspense>
               </main>
-              <footer className="border-t border-stone-200 py-6 bg-white/70 text-center text-xs text-stone-500">
+              <footer className="border-t border-stone-200/80 py-6 mb-14 md:mb-0 bg-white/70 text-center text-xs text-stone-500">
                 <p className="font-medium text-stone-700">
                   Relationship Intelligence AI &middot; External Relationship Memory
                 </p>

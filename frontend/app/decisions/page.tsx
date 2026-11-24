@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getDecisions, recordDecisionOutcome } from "@/lib/api";
 import { DecisionRecord } from "@/types";
 import { usePrivacy } from "@/context/PrivacyContext";
+import { useAuth } from "@/context/AuthContext";
 import { 
   History, 
   CheckCircle2, 
@@ -20,11 +21,14 @@ import {
   Compass,
   BrainCircuit,
   ShieldCheck,
-  ShieldAlert
+  ShieldAlert,
+  LogIn,
+  Shield
 } from "lucide-react";
 
 export default function DecisionsPage() {
   const { isLocked, maskText, openModal } = usePrivacy();
+  const { user, loading: authLoading, openAuthModal } = useAuth();
   const [decisions, setDecisions] = useState<DecisionRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,8 +51,13 @@ export default function DecisionsPage() {
   };
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     fetchDecisions();
-  }, []);
+  }, [authLoading, user]);
 
   // Escape key & body scroll lock for outcome modal
   useEffect(() => {
@@ -88,33 +97,57 @@ export default function DecisionsPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-16 md:pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200/80">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-stone-900">
             Decision Registry & Outcomes
           </h1>
-          <p className="text-xs text-stone-500 mt-1">
+          <p className="text-xs sm:text-sm text-stone-500 mt-1">
             Track consequential pauses, chosen paths, and real-world outcomes that feed back into future relationship intelligence.
           </p>
         </div>
         <Link
           href="/agent"
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-stone-900 text-stone-50 rounded-xl text-xs font-semibold hover:bg-stone-800 shadow-xs transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-stone-900 text-stone-50 rounded-xl text-xs font-semibold hover:bg-stone-800 shadow-xs transition-colors cursor-pointer"
         >
-          <span>Open AI Agent</span>
+          <span>Open AI Reasoning</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
-      {loading ? (
-        <div className="py-24 flex justify-center text-stone-400">
-          <Loader2 className="w-8 h-8 animate-spin" />
+      {authLoading || (loading && user) ? (
+        <div className="py-24 flex flex-col items-center justify-center gap-3 text-stone-400">
+          <Loader2 className="w-8 h-8 animate-spin text-stone-600" />
+          <span className="text-xs font-medium text-stone-500">
+            {authLoading ? "Verifying authentication..." : "Loading decisions..."}
+          </span>
+        </div>
+      ) : !user ? (
+        <div className="max-w-md mx-auto my-12 bg-white border border-stone-200/90 rounded-2xl p-8 text-center space-y-4 shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto">
+            <Shield className="w-6 h-6" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="font-bold text-stone-900 text-base">Sign In Required</h3>
+            <p className="text-xs text-stone-500 leading-relaxed">
+              Your consequential pause history and decision registry are private and protected by per-user isolation. Sign in to view them.
+            </p>
+          </div>
+          <div className="pt-2 flex justify-center">
+            <button
+              onClick={() => openAuthModal("signin")}
+              className="px-5 py-2.5 bg-stone-900 text-stone-50 rounded-xl text-xs font-bold hover:bg-stone-800 transition-colors shadow-2xs cursor-pointer flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-4 h-4 text-amber-400" />
+              <span>Sign In to Keeva</span>
+            </button>
+          </div>
         </div>
       ) : decisions.length === 0 ? (
-        <div className="bg-white border border-stone-200 border-dashed rounded-3xl p-12 text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center mx-auto text-stone-400">
+        <div className="bg-white border border-stone-200 border-dashed rounded-2xl p-10 text-center space-y-3">
+          <div className="w-12 h-12 rounded-xl bg-stone-100 flex items-center justify-center mx-auto text-stone-400">
             <History className="w-6 h-6" />
           </div>
           <h3 className="font-bold text-stone-800 text-base">No decisions recorded yet</h3>
@@ -131,13 +164,13 @@ export default function DecisionsPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {decisions.map((dec) => {
             const displayName = dec.personName ? maskText(dec.personName) : "General Context";
             return (
               <div
                 key={dec.id}
-                className="bg-white border border-stone-200/90 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4 hover:border-stone-300 card-hover-lift transition-all"
+                className="bg-white border border-stone-200/90 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-4 hover:border-stone-300 transition-all"
               >
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-stone-100">
@@ -151,7 +184,7 @@ export default function DecisionsPage() {
                       </span>
                     )}
                     <span
-                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full capitalize border ${
+                      className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full capitalize border ${
                         dec.status === "outcome_recorded"
                           ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                           : dec.status === "decided"
@@ -169,10 +202,10 @@ export default function DecisionsPage() {
 
                 {/* Original Situation / Impulse */}
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block mb-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 block mb-1">
                     Original Situation / Impulse:
                   </span>
-                  <p className="text-xs text-stone-800 italic bg-stone-50/80 p-3 rounded-xl border border-stone-100 leading-relaxed font-medium">
+                  <p className="text-xs text-stone-800 italic bg-stone-50/70 p-3.5 rounded-xl border-l-2 border-l-amber-400 border-y border-r border-stone-200/60 leading-relaxed font-normal">
                     "{maskText(dec.situation)}"
                   </p>
                 </div>

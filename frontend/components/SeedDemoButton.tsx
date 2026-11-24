@@ -47,7 +47,12 @@ export const SeedDemoButton: React.FC<Props> = ({ onSuccess, className = "" }) =
         <Sparkles className="w-3.5 h-3.5 text-amber-500 group-hover:scale-110 transition-transform" />
       )}
       <span className={success ? "font-bold text-emerald-800" : ""}>
-        {success ? "Demo History Loaded" : "Demo Data (Rahul · 8 yrs)"}
+        <span className="hidden sm:inline">
+          {success ? "Demo History Loaded" : "Demo Data (Rahul · 8 yrs)"}
+        </span>
+        <span className="sm:hidden">
+          {success ? "Loaded" : "Demo"}
+        </span>
       </span>
     </button>
   );

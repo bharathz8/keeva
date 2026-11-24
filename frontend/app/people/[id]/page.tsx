@@ -14,6 +14,7 @@ import {
 import { Person, Relationship, RelationshipEvent } from "@/types";
 import { AddEventModal } from "@/components/AddEventModal";
 import { usePrivacy } from "@/context/PrivacyContext";
+import { useAuth } from "@/context/AuthContext";
 import { 
   Clock, 
   Calendar, 
@@ -37,7 +38,8 @@ import {
   HeartHandshake,
   AlertTriangle,
   Flame,
-  ArrowRight
+  ArrowRight,
+  LogIn
 } from "lucide-react";
 
 export default function PersonProfilePage() {
@@ -45,11 +47,13 @@ export default function PersonProfilePage() {
   const personId = params?.id as string;
   const router = useRouter();
   const { isLocked, resolveName, openModal } = usePrivacy();
+  const { user, loading: authLoading, openAuthModal } = useAuth();
 
   const [person, setPerson] = useState<Person | null>(null);
   const [relationship, setRelationship] = useState<Relationship | null>(null);
   const [events, setEvents] = useState<RelationshipEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "timeline" | "contexts" | "ask_ai">("overview");
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
 
@@ -61,13 +65,14 @@ export default function PersonProfilePage() {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
+      setErrorMessage(null);
       const personData = await getPerson(personId);
       setPerson(personData);
 
       try {
         const relData = await getRelationship(personId);
         setRelationship(relData);
-        if (relData.id) {
+        if (relData?.id) {
           const evData = await getRelationshipEvents(relData.id);
           setEvents(evData);
         }
@@ -76,16 +81,22 @@ export default function PersonProfilePage() {
       }
     } catch (err: any) {
       console.error("Profile load error:", err);
+      setErrorMessage(err?.message || "Failed to load relationship profile");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     if (personId) {
       fetchProfileData();
     }
-  }, [personId]);
+  }, [authLoading, user, personId]);
 
   const handleDeletePerson = async () => {
     if (!confirm(`Are you sure you want to delete ${person?.name}? This will remove all associated memories.`)) {
@@ -124,21 +135,80 @@ export default function PersonProfilePage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || (loading && user)) {
     return (
-      <div className="py-24 flex justify-center text-stone-400">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="py-24 flex flex-col items-center justify-center gap-3 text-stone-400">
+        <Loader2 className="w-8 h-8 animate-spin text-stone-600" />
+        <span className="text-xs font-medium text-stone-500">
+          {authLoading ? "Verifying authentication..." : "Loading relationship profile..."}
+        </span>
+      </div>
+    );
+  }
+
+  if (!authLoading && !user) {
+    return (
+      <div className="max-w-md mx-auto my-16 bg-white border border-stone-200/90 rounded-2xl p-8 text-center space-y-4 shadow-xs animate-fade-in">
+        <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto">
+          <Shield className="w-6 h-6" />
+        </div>
+        <div className="space-y-1.5">
+          <h3 className="font-bold text-stone-900 text-base">Sign In Required</h3>
+          <p className="text-xs text-stone-500 leading-relaxed">
+            Relationship records and external memories are strictly protected by per-user isolation. Please sign in to view this profile.
+          </p>
+        </div>
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+          <button
+            onClick={() => openAuthModal("signin")}
+            className="w-full sm:w-auto px-5 py-2.5 bg-stone-900 text-stone-50 rounded-xl text-xs font-bold hover:bg-stone-800 transition-colors shadow-2xs cursor-pointer flex items-center justify-center gap-2"
+          >
+            <LogIn className="w-4 h-4 text-amber-400" />
+            <span>Sign In to Keeva</span>
+          </button>
+          <Link
+            href="/people"
+            className="w-full sm:w-auto px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold transition-colors text-center"
+          >
+            View All People
+          </Link>
+        </div>
       </div>
     );
   }
 
   if (!person) {
     return (
-      <div className="text-center py-16 space-y-3">
-        <h3 className="font-bold text-stone-900 text-lg">Person not found</h3>
-        <Link href="/people" className="text-xs text-stone-600 underline">
-          Back to people list
-        </Link>
+      <div className="max-w-md mx-auto my-16 bg-white border border-stone-200/90 rounded-2xl p-8 text-center space-y-4 shadow-xs animate-fade-in">
+        <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <div className="space-y-1.5">
+          <h3 className="font-bold text-stone-900 text-base">Relationship Record Not Found</h3>
+          <p className="text-xs text-stone-500 leading-relaxed">
+            {errorMessage?.includes("404") || errorMessage?.includes("not found")
+              ? "This person record does not exist or was deleted."
+              : "This relationship was not found under your account (protected by strict per-user privacy isolation)."}
+          </p>
+        </div>
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+          <Link
+            href="/people"
+            className="w-full sm:w-auto px-4 py-2 bg-stone-900 text-stone-50 rounded-xl text-xs font-semibold hover:bg-stone-800 transition-colors shadow-2xs"
+          >
+            Back to My People List
+          </Link>
+          <button
+            onClick={async () => {
+              try {
+                await fetchProfileData();
+              } catch {}
+            }}
+            className="w-full sm:w-auto px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold transition-colors"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -146,7 +216,7 @@ export default function PersonProfilePage() {
   const displayName = resolveName(person);
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
+    <div className="space-y-6 animate-fade-in pb-24 md:pb-12">
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
         <Link
@@ -176,95 +246,96 @@ export default function PersonProfilePage() {
       </div>
 
       {/* Hero Profile Card */}
-      <div className="bg-white border border-stone-200/90 rounded-3xl p-6 sm:p-7 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-white border border-stone-200/90 rounded-2xl p-5 sm:p-7 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200 text-amber-950 font-bold text-2xl flex items-center justify-center shadow-2xs shrink-0">
+          <div className="w-14 h-14 rounded-xl bg-stone-100 border border-stone-200 text-stone-800 font-bold text-xl flex items-center justify-center shadow-2xs shrink-0">
             {displayName[0]?.toUpperCase() || "P"}
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-black text-stone-950">{displayName}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-stone-900">{displayName}</h1>
               {isLocked && person.alias ? (
                 <button
                   onClick={openModal}
+                  aria-label="Cloaked behind proxy alias, click to unlock"
                   title="Identity cloaked behind proxy alias. Click to unlock."
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-950 border border-amber-300 hover:bg-amber-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-950 border border-amber-300 hover:bg-amber-100/70 transition-colors cursor-pointer"
                 >
                   <Lock className="w-3 h-3 text-amber-700" />
                   <span>Proxy ({person.aliasCategory || "category"}) &middot; Unlock</span>
                 </button>
               ) : !isLocked && person.alias ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-stone-100 text-stone-700 border border-stone-200">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-700 border border-stone-200">
                   <Unlock className="w-3 h-3 text-emerald-600" />
                   <span>Proxy: {person.alias}</span>
                 </span>
               ) : null}
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-900 border border-emerald-200 capitalize">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-900 border border-emerald-200 capitalize">
                 {person.status || "active"}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-stone-500 font-medium mt-1">
-              <span className="font-bold text-stone-700">{person.relationshipType}</span>
+              <span className="font-semibold text-stone-700">{person.relationshipType}</span>
               <span className="text-stone-300 mx-1.5">&middot;</span>
-              <span>Known for <strong className="text-stone-800">{person.duration || "unspecified"}</strong></span>
+              <span>Known for <strong className="text-stone-800 font-semibold">{person.duration || "unspecified"}</strong></span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-6 text-xs text-stone-500 md:border-l md:border-stone-200/80 md:pl-8 shrink-0">
+        <div className="flex items-center gap-6 text-xs text-stone-500 md:border-l md:border-stone-200 md:pl-8 shrink-0">
           <div>
-            <span className="block text-stone-400 text-[10px] uppercase font-bold tracking-wider">
+            <span className="block text-stone-400 text-[10px] uppercase font-semibold tracking-wider">
               Timeline Records
             </span>
-            <span className="font-black text-stone-900 text-lg">{events.length}</span>
+            <span className="font-bold text-stone-900 text-lg">{events.length}</span>
           </div>
           <div>
-            <span className="block text-stone-400 text-[10px] uppercase font-bold tracking-wider">
+            <span className="block text-stone-400 text-[10px] uppercase font-semibold tracking-wider">
               Last Interaction
             </span>
-            <span className="font-bold text-stone-800 text-sm">{person.lastInteraction || "Recent"}</span>
+            <span className="font-medium text-stone-800 text-sm">{person.lastInteraction || "Recent"}</span>
           </div>
         </div>
       </div>
 
       {/* Segmented Navigation Tabs */}
-      <div className="flex bg-stone-100/80 p-1.5 rounded-2xl border border-stone-200/70 text-xs font-bold overflow-x-auto gap-1">
+      <div className="flex bg-stone-100/90 p-1.5 rounded-xl border border-stone-200/80 text-xs font-semibold overflow-x-auto gap-1 scrollbar-none min-w-0 max-w-full">
         <button
           onClick={() => setActiveTab("overview")}
-          className={`px-4 py-2 rounded-xl transition-all shrink-0 ${
+          className={`px-3.5 py-2 rounded-lg transition-all shrink-0 cursor-pointer ${
             activeTab === "overview"
-              ? "bg-white text-stone-950 shadow-xs border border-stone-200 font-extrabold"
-              : "text-stone-600 hover:text-stone-900"
+              ? "bg-white text-stone-950 shadow-xs border border-stone-200/80 font-bold"
+              : "text-stone-600 hover:text-stone-900 hover:bg-white/50"
           }`}
         >
           Overview & Dynamics
         </button>
         <button
           onClick={() => setActiveTab("timeline")}
-          className={`px-4 py-2 rounded-xl transition-all shrink-0 ${
+          className={`px-3.5 py-2 rounded-lg transition-all shrink-0 cursor-pointer ${
             activeTab === "timeline"
-              ? "bg-white text-stone-950 shadow-xs border border-stone-200 font-extrabold"
-              : "text-stone-600 hover:text-stone-900"
+              ? "bg-white text-stone-950 shadow-xs border border-stone-200/80 font-bold"
+              : "text-stone-600 hover:text-stone-900 hover:bg-white/50"
           }`}
         >
           Longitudinal Timeline ({events.length})
         </button>
         <button
           onClick={() => setActiveTab("contexts")}
-          className={`px-4 py-2 rounded-xl transition-all shrink-0 ${
+          className={`px-3.5 py-2 rounded-lg transition-all shrink-0 cursor-pointer ${
             activeTab === "contexts"
-              ? "bg-white text-stone-950 shadow-xs border border-stone-200 font-extrabold"
-              : "text-stone-600 hover:text-stone-900"
+              ? "bg-white text-stone-950 shadow-xs border border-stone-200/80 font-bold"
+              : "text-stone-600 hover:text-stone-900 hover:bg-white/50"
           }`}
         >
           Context Matrix
         </button>
         <button
           onClick={() => setActiveTab("ask_ai")}
-          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shrink-0 ${
+          className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
             activeTab === "ask_ai"
-              ? "bg-white text-stone-950 shadow-xs border border-stone-200 font-extrabold"
-              : "text-stone-600 hover:text-stone-900"
+              ? "bg-white text-stone-950 shadow-xs border border-stone-200/80 font-bold"
+              : "text-stone-600 hover:text-stone-900 hover:bg-white/50"
           }`}
         >
           <Bot className="w-3.5 h-3.5 text-amber-600" />

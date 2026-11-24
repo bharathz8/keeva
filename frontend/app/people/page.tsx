@@ -7,6 +7,7 @@ import { RelationshipCard } from "@/components/RelationshipCard";
 import { AddPersonModal } from "@/components/AddPersonModal";
 import { SeedDemoButton } from "@/components/SeedDemoButton";
 import { usePrivacy } from "@/context/PrivacyContext";
+import { useAuth } from "@/context/AuthContext";
 import { 
   UserPlus, 
   Users, 
@@ -17,11 +18,14 @@ import {
   Lock, 
   Unlock,
   Sparkles,
-  X
+  X,
+  LogIn,
+  Shield
 } from "lucide-react";
 
 export default function PeoplePage() {
   const { isLocked, openModal } = usePrivacy();
+  const { user, loading: authLoading, openAuthModal } = useAuth();
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -41,8 +45,13 @@ export default function PeoplePage() {
   };
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     fetchPeople();
-  }, []);
+  }, [authLoading, user]);
 
   const relationshipTypes = ["All", "Friend", "Coworker", "Partner", "Family", "Other"];
 
@@ -62,15 +71,15 @@ export default function PeoplePage() {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
+    <div className="space-y-6 animate-fade-in pb-16 md:pb-8">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200/80">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-stone-950">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-stone-900">
               People & Relationships
             </h1>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
               {people.length} Active
             </span>
           </div>
@@ -83,7 +92,7 @@ export default function PeoplePage() {
           <SeedDemoButton onSuccess={fetchPeople} />
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-stone-900 text-stone-50 rounded-xl text-xs font-bold hover:bg-stone-800 shadow-xs transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-stone-900 text-stone-50 rounded-xl text-xs font-semibold hover:bg-stone-800 shadow-xs transition-colors cursor-pointer"
           >
             <UserPlus className="w-4 h-4 text-amber-300" />
             <span>Add Person</span>
@@ -94,12 +103,12 @@ export default function PeoplePage() {
       {/* Privacy Cloak Reminder Banner */}
       <div className={`p-3.5 sm:p-4 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
         isLocked 
-          ? "bg-amber-50/70 border-amber-200/90 text-amber-950" 
-          : "bg-emerald-50/70 border-emerald-200/90 text-emerald-950"
+          ? "bg-amber-50/60 border-amber-200 text-amber-950" 
+          : "bg-emerald-50/60 border-emerald-200 text-emerald-950"
       }`}>
         <div className="flex items-center gap-2.5">
-          <div className={`p-1.5 rounded-lg ${isLocked ? "bg-amber-200 text-amber-900" : "bg-emerald-200 text-emerald-900"}`}>
-            {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+          <div className={`p-1.5 rounded-lg ${isLocked ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>
+            {isLocked ? <Lock className="w-3.5 h-3.5 text-amber-800" /> : <Unlock className="w-3.5 h-3.5 text-emerald-800" />}
           </div>
           <div>
             <span className="font-bold">
@@ -107,7 +116,7 @@ export default function PeoplePage() {
                 ? "Privacy Shield is Active: Names are cloaked behind proxy codenames." 
                 : "Privacy Shield is Unlocked: Real names are currently revealed."}
             </span>
-            <span className="text-stone-500 block text-[11px]">
+            <span className="text-stone-500 block text-[11px] mt-0.5">
               {isLocked 
                 ? "Click 'Unlock' to enter your Master PIN or security answer to reveal original identities."
                 : "Click 'Manage' to re-cloak the vault before sharing your screen."}
@@ -117,40 +126,42 @@ export default function PeoplePage() {
 
         <button
           onClick={openModal}
-          className="px-3 py-1.5 bg-white border border-stone-200 text-stone-900 rounded-xl text-xs font-bold hover:bg-stone-50 shadow-2xs transition-colors shrink-0"
+          className="px-3.5 py-1.5 bg-white border border-stone-200 text-stone-800 rounded-xl text-xs font-semibold hover:bg-stone-50 hover:border-stone-300 shadow-2xs transition-colors shrink-0 cursor-pointer"
         >
           {isLocked ? "Unlock Real Names" : "Manage / Cloak"}
         </button>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-stone-200/90 shadow-2xs">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 sm:p-3.5 rounded-2xl border border-stone-200/90 shadow-2xs">
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-stone-400" />
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-stone-400" />
           <input
             type="text"
+            aria-label="Search people"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by real name, proxy codename, or note..."
+            placeholder="Search by name, proxy, or notes..."
             className="w-full pl-9 pr-8 py-2 text-xs border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900 bg-stone-50/60 font-medium"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-2.5 text-stone-400 hover:text-stone-600 p-0.5"
+              aria-label="Clear search"
+              className="absolute right-2.5 top-2.5 text-stone-400 hover:text-stone-600 p-0.5 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none min-w-0 max-w-full">
           <Filter className="w-3.5 h-3.5 text-stone-400 mr-1 hidden sm:block shrink-0" />
           {relationshipTypes.map((type) => (
             <button
               key={type}
               onClick={() => setSelectedFilter(type)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
                 selectedFilter === type
                   ? "bg-stone-900 text-stone-50 shadow-xs"
                   : "bg-stone-100/80 text-stone-600 hover:bg-stone-200/70 hover:text-stone-900"
@@ -163,9 +174,33 @@ export default function PeoplePage() {
       </div>
 
       {/* Grid */}
-      {loading ? (
-        <div className="py-24 flex justify-center text-stone-400">
-          <Loader2 className="w-8 h-8 animate-spin" />
+      {authLoading || (loading && user) ? (
+        <div className="py-24 flex flex-col items-center justify-center gap-3 text-stone-400">
+          <Loader2 className="w-8 h-8 animate-spin text-stone-600" />
+          <span className="text-xs font-medium text-stone-500">
+            {authLoading ? "Verifying authentication..." : "Loading relationships..."}
+          </span>
+        </div>
+      ) : !user ? (
+        <div className="max-w-md mx-auto my-12 bg-white border border-stone-200/90 rounded-2xl p-8 text-center space-y-4 shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto">
+            <Shield className="w-6 h-6" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="font-bold text-stone-900 text-base">Sign In Required</h3>
+            <p className="text-xs text-stone-500 leading-relaxed">
+              Your relationships and memory profiles are private and isolated to your account. Sign in to view and manage them.
+            </p>
+          </div>
+          <div className="pt-2 flex justify-center">
+            <button
+              onClick={() => openAuthModal("signin")}
+              className="px-5 py-2.5 bg-stone-900 text-stone-50 rounded-xl text-xs font-bold hover:bg-stone-800 transition-colors shadow-2xs cursor-pointer flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-4 h-4 text-amber-400" />
+              <span>Sign In to Keeva</span>
+            </button>
+          </div>
         </div>
       ) : filteredPeople.length === 0 ? (
         <div className="bg-white border-2 border-stone-200 border-dashed rounded-3xl p-12 text-center space-y-3">
