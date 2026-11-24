@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   AlertTriangle, 
   Copy, 
@@ -12,9 +12,16 @@ import {
   ChevronDown, 
   ChevronUp,
   Cpu,
-  ArrowRight
+  ArrowRight,
+  DownloadCloud,
+  Loader2
 } from "lucide-react";
-import { LocalAIFailureReport } from "@/lib/hybrid-ai";
+import { 
+  LocalAIFailureReport, 
+  DownloadProgressInfo, 
+  triggerModelDownload 
+} from "@/lib/hybrid-ai";
+import { ModelDownloadProgress } from "./ModelDownloadProgress";
 
 interface Props {
   report: LocalAIFailureReport;
@@ -31,6 +38,37 @@ export const LocalAIErrorCard: React.FC<Props> = ({
 }) => {
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+  const [downloadInfo, setDownloadInfo] = useState<DownloadProgressInfo | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const customEvent = e as CustomEvent<DownloadProgressInfo>;
+      if (customEvent.detail) {
+        setDownloadInfo(customEvent.detail);
+        if (customEvent.detail.isComplete) {
+          setIsDownloading(false);
+        }
+      }
+    };
+    window.addEventListener("keeva_model_download_progress", handler);
+    return () => window.removeEventListener("keeva_model_download_progress", handler);
+  }, []);
+
+  const handleStartDownload = async () => {
+    setIsDownloading(true);
+    setDownloadError(null);
+    const res = await triggerModelDownload((info) => {
+      setDownloadInfo(info);
+    });
+    setIsDownloading(false);
+    if (!res.success) {
+      setDownloadError(res.error || "Download could not be completed.");
+    } else {
+      if (onRetryLocal) onRetryLocal();
+    }
+  };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -78,6 +116,22 @@ export const LocalAIErrorCard: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      {/* Live Download Progress Bar (When downloadable or actively downloading) */}
+      {(report.category === "model_downloadable" ||
+        report.category === "model_downloading" ||
+        isDownloading ||
+        downloadInfo !== null) && (
+        <ModelDownloadProgress
+          progress={downloadInfo?.percent}
+          loadedBytes={downloadInfo?.loadedBytes}
+          totalBytes={downloadInfo?.totalBytes}
+          isDownloading={isDownloading || report.category === "model_downloading"}
+          isComplete={downloadInfo?.isComplete}
+          error={downloadError || undefined}
+          onRetry={handleStartDownload}
+        />
+      )}
 
       {/* Actionable Steps Checklist */}
       {report.actionableSteps.length > 0 && (
@@ -150,12 +204,32 @@ export const LocalAIErrorCard: React.FC<Props> = ({
         <div className="text-[11px] text-amber-950 font-medium">
           💡 You don't have to wait: <strong>Cloud Gemini 2.5 Flash</strong> is live and can answer immediately.
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {report.category === "model_downloadable" && !downloadInfo?.isComplete && (
+            <button
+              type="button"
+              onClick={handleStartDownload}
+              disabled={isDownloading}
+              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Downloading...</span>
+                </>
+              ) : (
+                <>
+                  <DownloadCloud className="w-3.5 h-3.5" />
+                  <span>Download Model (~1.5 GB)</span>
+                </>
+              )}
+            </button>
+          )}
           {onRetryLocal && (
             <button
               type="button"
               onClick={onRetryLocal}
-              className="px-3 py-1.5 bg-white hover:bg-stone-50 text-stone-800 border border-stone-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all"
+              className="px-3 py-1.5 bg-white hover:bg-stone-50 text-stone-800 border border-stone-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
             >
               <RefreshCw className="w-3 h-3 text-stone-500" />
               <span>Retry Local</span>

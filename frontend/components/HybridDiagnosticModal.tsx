@@ -2,32 +2,36 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { 
-  X, 
-  Cpu, 
-  Cloud, 
-  Activity, 
-  RefreshCw, 
-  Loader2, 
+import {
+  X,
+  Cpu,
+  Cloud,
+  Activity,
+  RefreshCw,
+  Loader2,
   Database,
   Zap,
   CheckCircle2,
   AlertTriangle,
   Check,
   Sliders,
-  AlertCircle
+  AlertCircle,
+  DownloadCloud
 } from "lucide-react";
-import { 
-  attemptOnDeviceAnalysis, 
+import {
+  attemptOnDeviceAnalysis,
   getDetailedLocalAIDiagnosis,
   diagnoseLocalAIFailure,
   getPreferredInferenceMode,
   setPreferredInferenceMode,
   InferenceMode,
   DetailedLocalAIDiagnostic,
-  LocalAIFailureReport
+  LocalAIFailureReport,
+  DownloadProgressInfo,
+  triggerModelDownload
 } from "@/lib/hybrid-ai";
 import { LocalAIErrorCard } from "./LocalAIErrorCard";
+import { ModelDownloadProgress } from "./ModelDownloadProgress";
 import { getAIDiagnostics } from "@/lib/api";
 
 interface Props {
@@ -61,12 +65,31 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
     text: string;
   } | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
+  const [downloadBytes, setDownloadBytes] = useState<{ loaded?: number; total?: number } | null>(null);
+  const [isDownloadingModel, setIsDownloadingModel] = useState(false);
   const [localFailureReport, setLocalFailureReport] = useState<LocalAIFailureReport | null>(null);
   const [loadingCloud, setLoadingCloud] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setMode(getPreferredInferenceMode());
+
+    const progressHandler = (e: Event) => {
+      const customEvent = e as CustomEvent<DownloadProgressInfo>;
+      if (customEvent.detail) {
+        setDownloadProgress(customEvent.detail.percent);
+        setDownloadBytes({
+          loaded: customEvent.detail.loadedBytes,
+          total: customEvent.detail.totalBytes
+        });
+        if (customEvent.detail.isComplete) {
+          setIsDownloadingModel(false);
+          getDetailedLocalAIDiagnosis().then(setDetailedDiag);
+        }
+      }
+    };
+    window.addEventListener("keeva_model_download_progress", progressHandler);
+    return () => window.removeEventListener("keeva_model_download_progress", progressHandler);
   }, []);
 
   const handleSelectMode = (newMode: InferenceMode) => {
@@ -127,16 +150,35 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
     };
   }, [isOpen, onClose]);
 
+  const handleStartDownload = async () => {
+    setIsDownloadingModel(true);
+    try {
+      await triggerModelDownload((info) => {
+        setDownloadProgress(info.percent);
+        setDownloadBytes({ loaded: info.loadedBytes, total: info.totalBytes });
+      });
+      runAllChecks();
+    } catch (err) {
+      console.warn("Download initiation error:", err);
+    } finally {
+      setIsDownloadingModel(false);
+    }
+  };
+
   const handleTestLocalPrompt = async () => {
     setTestingLocal(true);
     setLocalTestResult(null);
     setLocalFailureReport(null);
     setDownloadProgress(null);
+    setDownloadBytes(null);
     try {
       const res = await attemptOnDeviceAnalysis(
         "Brief test: Analyze tone of 'We had an honest talk and resolved the tension.'",
         {
-          onDownloadProgress: (pct) => setDownloadProgress(pct)
+          onDownloadProgress: (pct, loaded, total) => {
+            setDownloadProgress(pct);
+            setDownloadBytes({ loaded, total });
+          }
         }
       );
 
@@ -214,13 +256,13 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
   if (!isOpen || !mounted) return null;
 
   const modalContent = (
-    <div 
+    <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-stone-950/65 backdrop-blur-xs animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div 
+      <div
         className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-stone-200/90 flex flex-col max-h-[88vh] overflow-hidden animate-modal-pop"
         onClick={(e) => e.stopPropagation()}
       >
@@ -266,11 +308,10 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
               <button
                 type="button"
                 onClick={() => handleSelectMode("hybrid")}
-                className={`p-3 rounded-2xl border text-left transition-all ${
-                  mode === "hybrid"
-                    ? "bg-amber-500/10 border-amber-400 text-stone-950 ring-2 ring-amber-400/30 shadow-2xs font-bold"
-                    : "bg-stone-50/80 hover:bg-stone-100 border-stone-200 text-stone-700"
-                }`}
+                className={`p-3 rounded-2xl border text-left transition-all ${mode === "hybrid"
+                  ? "bg-amber-500/10 border-amber-400 text-stone-950 ring-2 ring-amber-400/30 shadow-2xs font-bold"
+                  : "bg-stone-50/80 hover:bg-stone-100 border-stone-200 text-stone-700"
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs flex items-center gap-1">
@@ -287,11 +328,10 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
               <button
                 type="button"
                 onClick={() => handleSelectMode("on-device")}
-                className={`p-3 rounded-2xl border text-left transition-all ${
-                  mode === "on-device"
-                    ? "bg-emerald-50 border-emerald-400 text-emerald-950 ring-2 ring-emerald-400/30 shadow-2xs font-bold"
-                    : "bg-stone-50/80 hover:bg-stone-100 border-stone-200 text-stone-700"
-                }`}
+                className={`p-3 rounded-2xl border text-left transition-all ${mode === "on-device"
+                  ? "bg-emerald-50 border-emerald-400 text-emerald-950 ring-2 ring-emerald-400/30 shadow-2xs font-bold"
+                  : "bg-stone-50/80 hover:bg-stone-100 border-stone-200 text-stone-700"
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs flex items-center gap-1">
@@ -308,11 +348,10 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
               <button
                 type="button"
                 onClick={() => handleSelectMode("cloud")}
-                className={`p-3 rounded-2xl border text-left transition-all ${
-                  mode === "cloud"
-                    ? "bg-blue-50 border-blue-400 text-blue-950 ring-2 ring-blue-400/30 shadow-2xs font-bold"
-                    : "bg-stone-50/80 hover:bg-stone-100 border-stone-200 text-stone-700"
-                }`}
+                className={`p-3 rounded-2xl border text-left transition-all ${mode === "cloud"
+                  ? "bg-blue-50 border-blue-400 text-blue-950 ring-2 ring-blue-400/30 shadow-2xs font-bold"
+                  : "bg-stone-50/80 hover:bg-stone-100 border-stone-200 text-stone-700"
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs flex items-center gap-1">
@@ -337,27 +376,26 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                 </span>
               </div>
               <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
-                  detailedDiag?.modelAvailability === "readily"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                    : detailedDiag?.modelAvailability === "after-download"
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${detailedDiag?.modelAvailability === "readily"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                  : detailedDiag?.modelAvailability === "after-download"
                     ? "bg-amber-50 text-amber-800 border-amber-300"
                     : detailedDiag?.modelAvailability === "downloading"
-                    ? "bg-sky-50 text-sky-800 border-sky-300"
-                    : detailedDiag?.modelAvailability === "no"
-                    ? "bg-rose-50 text-rose-800 border-rose-300"
-                    : "bg-stone-100 text-stone-600 border-stone-200"
-                }`}
+                      ? "bg-sky-50 text-sky-800 border-sky-300"
+                      : detailedDiag?.modelAvailability === "no"
+                        ? "bg-rose-50 text-rose-800 border-rose-300"
+                        : "bg-stone-100 text-stone-600 border-stone-200"
+                  }`}
               >
-                {detailedDiag?.modelAvailability === "readily" 
-                  ? "Active (Local Nano Ready)" 
+                {detailedDiag?.modelAvailability === "readily"
+                  ? "Active (Local Nano Ready)"
                   : detailedDiag?.modelAvailability === "after-download"
-                  ? "Needs Download (~1.5 GB)"
-                  : detailedDiag?.modelAvailability === "downloading"
-                  ? "Downloading Components..."
-                  : detailedDiag?.modelAvailability === "no"
-                  ? "Model Unavailable on Device"
-                  : "Prompt API Unsupported"}
+                    ? "Needs Download (~1.5 GB)"
+                    : detailedDiag?.modelAvailability === "downloading"
+                      ? "Downloading Components..."
+                      : detailedDiag?.modelAvailability === "no"
+                        ? "Model Unavailable on Device"
+                        : "Prompt API Unsupported"}
               </span>
             </div>
 
@@ -375,32 +413,63 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
               </div>
             ) : null}
 
-            <div className="flex items-center justify-between pt-1">
-              <button
-                type="button"
-                onClick={handleTestLocalPrompt}
-                disabled={testingLocal}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-stone-200 hover:border-stone-300 rounded-xl font-semibold text-stone-800 shadow-2xs transition-all hover:scale-101 cursor-pointer"
-              >
-                {testingLocal ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-stone-600" />
-                ) : (
-                  <Zap className="w-3.5 h-3.5 text-amber-500" />
+            {/* Live Model Download Progress Bar */}
+            {(isDownloadingModel ||
+              (testingLocal && downloadProgress !== null) ||
+              detailedDiag?.modelAvailability === "downloading" ||
+              localTestResult?.status === "downloading") && (
+              <ModelDownloadProgress
+                progress={downloadProgress}
+                loadedBytes={downloadBytes?.loaded}
+                totalBytes={downloadBytes?.total}
+                isDownloading={true}
+                isComplete={detailedDiag?.modelAvailability === "readily"}
+              />
+            )}
+
+            <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleTestLocalPrompt}
+                  disabled={testingLocal || isDownloadingModel}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-stone-200 hover:border-stone-300 rounded-xl font-semibold text-stone-800 shadow-2xs transition-all hover:scale-101 cursor-pointer"
+                >
+                  {testingLocal ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-stone-600" />
+                  ) : (
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                  )}
+                  <span>Run Local Prompt Test</span>
+                </button>
+
+                {detailedDiag?.modelAvailability === "after-download" && (
+                  <button
+                    type="button"
+                    onClick={handleStartDownload}
+                    disabled={isDownloadingModel}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded-xl font-bold text-white shadow-2xs transition-all hover:scale-101 cursor-pointer text-xs"
+                  >
+                    {isDownloadingModel ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <DownloadCloud className="w-3.5 h-3.5" />
+                    )}
+                    <span>Download Model (~1.5 GB)</span>
+                  </button>
                 )}
-                <span>Run Local Prompt Test</span>
-              </button>
+              </div>
               <span className="text-[10px] text-stone-400">Target: LanguageModel</span>
             </div>
 
             {/* Local Test Output */}
             {localTestResult && (
-              <div className={`p-3.5 rounded-xl border text-[11px] leading-relaxed shadow-2xs ${
-                localTestResult.success 
-                  ? "bg-emerald-50/90 border-emerald-300 text-emerald-950"
-                  : localTestResult.status === "downloadable" || localTestResult.status === "downloading"
+              <div className={`p-3.5 rounded-xl border text-[11px] leading-relaxed shadow-2xs ${localTestResult.success
+                ? "bg-emerald-50/90 border-emerald-300 text-emerald-950"
+                : localTestResult.status === "downloadable" || localTestResult.status === "downloading"
                   ? "bg-amber-50/90 border-amber-300 text-amber-950"
                   : "bg-red-50 border-red-200 text-red-900"
-              }`}>
+                }`}>
                 <div className="font-bold mb-1.5 flex items-center gap-1.5 text-xs">
                   {localTestResult.success ? (
                     <>
@@ -450,11 +519,10 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                 </span>
               </div>
               <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
-                  cloudDiag?.status === "operational"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                    : "bg-amber-50 text-amber-800 border-amber-300"
-                }`}
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${cloudDiag?.status === "operational"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                  : "bg-amber-50 text-amber-800 border-amber-300"
+                  }`}
               >
                 {cloudDiag?.cloudGemini?.status || "Live-Connected"}
               </span>

@@ -18,6 +18,22 @@ export interface HybridInferenceStatus {
   details: string;
 }
 
+export interface DownloadProgressInfo {
+  percent: number;
+  loadedBytes?: number;
+  totalBytes?: number;
+  isComplete?: boolean;
+}
+
+export function formatBytes(bytes?: number, decimals: number = 1): string {
+  if (typeof bytes !== "number" || isNaN(bytes) || bytes <= 0) return "0 B";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
 export interface DetailedLocalAIDiagnostic {
   hasPromptAPI: boolean;
   modelAvailability: "readily" | "after-download" | "downloading" | "no" | "unsupported";
@@ -35,13 +51,13 @@ export interface ActionableStep {
 
 export interface LocalAIFailureReport {
   category:
-    | "browser_unsupported"
-    | "flag_disabled"
-    | "model_downloading"
-    | "model_downloadable"
-    | "hardware_requirement"
-    | "runtime_error"
-    | "unknown";
+  | "browser_unsupported"
+  | "flag_disabled"
+  | "model_downloading"
+  | "model_downloadable"
+  | "hardware_requirement"
+  | "runtime_error"
+  | "unknown";
   title: string;
   summary: string;
   technicalDetails: string;
@@ -469,6 +485,77 @@ export interface LocalPromptExecutionResult {
   source: string;
   status: LocalModelAvailabilityState;
   downloadProgress?: number;
+  downloadBytes?: { loaded: number; total: number };
+}
+
+/**
+ * Triggers the local model download in Chrome via LanguageModel.create()
+ * while monitoring downloadprogress events.
+ */
+export async function triggerModelDownload(
+  onProgress?: (info: DownloadProgressInfo) => void
+): Promise<{ success: boolean; error?: string }> {
+  if (typeof window === "undefined" || typeof self === "undefined") {
+    return { success: false, error: "Prompt API unavailable in server environment." };
+  }
+
+  const lm = getLanguageModelAPI();
+  if (!lm) {
+    return { success: false, error: "Prompt API (LanguageModel) is not supported in this browser." };
+  }
+
+  let session: LanguageModelSession | null = null;
+  try {
+    session = await lm.create({
+      systemPrompt: "Initialize model weights.",
+      monitor: (monitor: EventTarget) => {
+        if (monitor && typeof monitor.addEventListener === "function") {
+          monitor.addEventListener("downloadprogress", (e: Event) => {
+            const p = e as unknown as { loaded?: number; total?: number };
+            let pct = 0;
+            if (typeof p.total === "number" && p.total > 0 && typeof p.loaded === "number") {
+              pct = Math.min(100, Math.max(0, Math.round((p.loaded / p.total) * 100)));
+            } else if (typeof p.loaded === "number" && p.loaded <= 1) {
+              pct = Math.min(100, Math.max(0, Math.round(p.loaded * 100)));
+            }
+            const info: DownloadProgressInfo = {
+              percent: pct,
+              loadedBytes: p.loaded,
+              totalBytes: p.total,
+              isComplete: pct >= 100
+            };
+            onProgress?.(info);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("keeva_model_download_progress", { detail: info }));
+            }
+          });
+        }
+      }
+    });
+
+    const finalInfo: DownloadProgressInfo = {
+      percent: 100,
+      isComplete: true
+    };
+    onProgress?.(finalInfo);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("keeva_model_download_progress", { detail: finalInfo }));
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.warn("Model download trigger error:", err);
+    return { success: false, error: errMsg };
+  } finally {
+    if (session && typeof session.destroy === "function") {
+      try {
+        session.destroy();
+      } catch (e) {
+        console.warn("Error destroying session after download trigger:", e);
+      }
+    }
+  }
 }
 
 /**
@@ -479,7 +566,7 @@ export async function attemptOnDeviceAnalysis(
   text: string,
   options?: {
     systemPrompt?: string;
-    onDownloadProgress?: (percent: number) => void;
+    onDownloadProgress?: (percent: number, loaded?: number, total?: number) => void;
   }
 ): Promise<LocalPromptExecutionResult> {
   if (typeof window === "undefined") {
@@ -540,6 +627,9 @@ export async function attemptOnDeviceAnalysis(
 
   // Create session and execute with strict try/finally cleanup
   let session: LanguageModelSession | null = null;
+  let lastProgressBytes: { loaded: number; total: number } | undefined;
+  let lastProgressPct: number | undefined;
+
   try {
     const createOptions: LanguageModelCreateOptions = {
       systemPrompt:
@@ -552,13 +642,30 @@ export async function attemptOnDeviceAnalysis(
         if (monitor && typeof monitor.addEventListener === "function") {
           monitor.addEventListener("downloadprogress", (e: Event) => {
             const progressEvent = e as unknown as { loaded?: number; total?: number };
+            let pct = 0;
             if (
-              typeof progressEvent.loaded === "number" &&
               typeof progressEvent.total === "number" &&
-              progressEvent.total > 0
+              progressEvent.total > 0 &&
+              typeof progressEvent.loaded === "number"
             ) {
-              const pct = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-              options.onDownloadProgress?.(pct);
+              pct = Math.min(100, Math.max(0, Math.round((progressEvent.loaded / progressEvent.total) * 100)));
+              lastProgressBytes = { loaded: progressEvent.loaded, total: progressEvent.total };
+            } else if (typeof progressEvent.loaded === "number" && progressEvent.loaded <= 1) {
+              pct = Math.min(100, Math.max(0, Math.round(progressEvent.loaded * 100)));
+            }
+            lastProgressPct = pct;
+            options.onDownloadProgress?.(pct, progressEvent.loaded, progressEvent.total);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("keeva_model_download_progress", {
+                  detail: {
+                    percent: pct,
+                    loadedBytes: progressEvent.loaded,
+                    totalBytes: progressEvent.total,
+                    isComplete: pct >= 100
+                  }
+                })
+              );
             }
           });
         }
@@ -572,7 +679,9 @@ export async function attemptOnDeviceAnalysis(
       success: true,
       result: response,
       source: "on-device",
-      status: "ready"
+      status: "ready",
+      downloadProgress: lastProgressPct,
+      downloadBytes: lastProgressBytes
     };
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
@@ -583,7 +692,9 @@ export async function attemptOnDeviceAnalysis(
       error: errMsg || "Local inference failed. Cloud Gemini fallback is available.",
       failureReport: diag,
       source: "on-device-failed",
-      status: availability === "downloadable" ? "downloadable" : "unavailable"
+      status: availability === "downloadable" ? "downloadable" : "unavailable",
+      downloadProgress: lastProgressPct,
+      downloadBytes: lastProgressBytes
     };
   } finally {
     if (session && typeof session.destroy === "function") {
