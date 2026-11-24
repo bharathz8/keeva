@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { getPeople, sendAgentMessage, submitAgentReflection, seedDemoData } from "@/lib/api";
+import { getPeople, sendAgentMessage, submitAgentReflection } from "@/lib/api";
 import { Person, AgentMessageResponse, FutureBranch } from "@/types";
 import { AIPauseCard } from "@/components/AIPauseCard";
 import { FutureBranchCard } from "@/components/FutureBranchCard";
@@ -12,6 +12,7 @@ import {
   setPreferredInferenceMode, 
   getDetailedLocalAIDiagnosis, 
   diagnoseLocalAIFailure,
+  checkLocalModelAvailability,
   InferenceMode,
   LocalAIFailureReport
 } from "@/lib/hybrid-ai";
@@ -153,11 +154,20 @@ export default function AgentPage() {
     }
 
     try {
+      let clientInferenceAttempted = false;
+      if (inferenceMode === "on-device" || inferenceMode === "hybrid") {
+        const localCheck = await checkLocalModelAvailability();
+        if (localCheck === "ready") {
+          clientInferenceAttempted = true;
+        }
+      }
+
       const response = await sendAgentMessage(
         textToSend.trim(),
         selectedPersonId || undefined,
         undefined,
-        inferenceMode
+        inferenceMode,
+        clientInferenceAttempted
       );
 
       const agentMsg: ChatMessage = {

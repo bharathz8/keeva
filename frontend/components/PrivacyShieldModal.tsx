@@ -230,7 +230,6 @@ export function PrivacyShieldModal() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-stone-800 flex items-center justify-between">
                       <span>Option 1: Master PIN or Password</span>
-                      <span className="text-[10px] text-stone-400 font-normal">Demo default: 1234</span>
                     </label>
                     <div className="relative">
                       <input

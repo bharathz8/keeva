@@ -137,7 +137,7 @@ async def run_ai_diagnostic(user: dict = Depends(get_current_user)):
     return {
         "status": "operational",
         "hybridArchitecture": {
-            "tier1_local": "On-Device Chrome Built-in AI / Prompt API (window.ai.languageModel)",
+            "tier1_local": "On-Device Chrome Built-in AI / Prompt API (LanguageModel)",
             "tier2_cloud": "Google Cloud Gemini (gemini-2.5-flash) via Firebase AI Logic layer",
             "routingStrategy": "Attempt On-Device -> Automatic Fallback to Cloud Gemini"
         },

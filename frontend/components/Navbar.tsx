@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { usePrivacy } from "@/context/PrivacyContext";
-import { SeedDemoButton } from "./SeedDemoButton";
 import { HybridInferenceBadge } from "./HybridInferenceBadge";
 import { PrivacyShieldModal } from "./PrivacyShieldModal";
 import { AuthModal } from "./AuthModal";
@@ -121,9 +120,6 @@ export const Navbar: React.FC = () => {
                   </>
                 )}
               </button>
-
-              {/* Seed Demo Button */}
-              <SeedDemoButton />
 
               {/* User Account / Sign In / Sign Up */}
               {!mounted ? (

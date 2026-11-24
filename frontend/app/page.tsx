@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { getPeople, getDecisions, seedDemoData } from "@/lib/api";
+import { getPeople, getDecisions } from "@/lib/api";
 import { Person, DecisionRecord } from "@/types";
 import { RelationshipCard } from "@/components/RelationshipCard";
 import { AddPersonModal } from "@/components/AddPersonModal";
@@ -36,7 +36,6 @@ export default function DashboardPage() {
   const [decisions, setDecisions] = useState<DecisionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [seeding, setSeeding] = useState(false);
   const { isLocked, openModal, resolveName } = usePrivacy();
 
   const fetchData = async () => {
@@ -60,18 +59,6 @@ export default function DashboardPage() {
     }
     fetchData();
   }, [authLoading, user]);
-
-  const handleSeedDemo = async () => {
-    try {
-      setSeeding(true);
-      await seedDemoData();
-      await fetchData();
-    } catch (err: any) {
-      alert("Demo seed error: " + err.message);
-    } finally {
-      setSeeding(false);
-    }
-  };
 
   return (
     <div className="space-y-8 animate-fade-in pb-16 md:pb-8">
@@ -273,16 +260,15 @@ export default function DashboardPage() {
             <div className="max-w-md mx-auto space-y-1">
               <h4 className="font-bold text-stone-900 text-base">No relationships tracked yet</h4>
               <p className="text-xs text-stone-500 leading-relaxed">
-                Add someone or click below to seed Rahul's 8-year friendship history with political disagreements and reconciliation memories.
+                Add a contact or person in your life to begin building their longitudinal relationship memory profile and interaction context.
               </p>
             </div>
             <button
-              onClick={handleSeedDemo}
-              disabled={seeding}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-stone-50 text-xs font-bold rounded-xl hover:bg-stone-800 shadow-xs transition-colors"
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-stone-50 text-xs font-bold rounded-xl hover:bg-stone-800 shadow-xs transition-colors cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>{seeding ? "Seeding..." : "Load 8-Year Rahul History"}</span>
+              <UserPlus className="w-3.5 h-3.5 text-amber-300" />
+              <span>Add First Relationship</span>
             </button>
           </div>
         ) : (

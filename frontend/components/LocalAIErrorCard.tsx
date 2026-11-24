@@ -41,9 +41,11 @@ export const LocalAIErrorCard: React.FC<Props> = ({
   const getCategoryBadge = () => {
     switch (report.category) {
       case "flag_disabled":
-        return { label: "Chrome Flag Disabled", color: "bg-rose-100 text-rose-900 border-rose-300" };
+        return { label: "Prompt API Disabled", color: "bg-rose-100 text-rose-900 border-rose-300" };
+      case "model_downloadable":
+        return { label: "Model Needs Download (~1.5 GB)", color: "bg-amber-100 text-amber-900 border-amber-300" };
       case "model_downloading":
-        return { label: "Model Not Downloaded (~1.5 GB)", color: "bg-amber-100 text-amber-900 border-amber-300" };
+        return { label: "Model Downloading (~1.5 GB)", color: "bg-sky-100 text-sky-900 border-sky-300" };
       case "hardware_requirement":
         return { label: "Hardware Requirement Blocked", color: "bg-orange-100 text-orange-900 border-orange-300" };
       case "browser_unsupported":

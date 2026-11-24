@@ -5,7 +5,6 @@ import { getPeople } from "@/lib/api";
 import { Person } from "@/types";
 import { RelationshipCard } from "@/components/RelationshipCard";
 import { AddPersonModal } from "@/components/AddPersonModal";
-import { SeedDemoButton } from "@/components/SeedDemoButton";
 import { usePrivacy } from "@/context/PrivacyContext";
 import { useAuth } from "@/context/AuthContext";
 import { 
@@ -89,7 +88,6 @@ export default function PeoplePage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <SeedDemoButton onSuccess={fetchPeople} />
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-stone-900 text-stone-50 rounded-xl text-xs font-semibold hover:bg-stone-800 shadow-xs transition-colors cursor-pointer"
@@ -213,13 +211,12 @@ export default function PeoplePage() {
           <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
             {searchQuery
               ? `No people matched "${searchQuery}". Try clearing your search query or switching filters.`
-              : "Add someone to begin tracking longitudinal notes, or load the demo seed data to explore Rahul's profile."}
+              : "Add someone to begin tracking longitudinal memory, friction patterns, and interaction context."}
           </p>
-          <div className="pt-2 flex justify-center gap-2">
-            <SeedDemoButton onSuccess={fetchPeople} />
+          <div className="pt-2 flex justify-center">
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="px-4 py-2 bg-stone-900 text-stone-50 text-xs font-bold rounded-xl hover:bg-stone-800 shadow-xs"
+              className="px-4 py-2 bg-stone-900 text-stone-50 text-xs font-bold rounded-xl hover:bg-stone-800 shadow-xs cursor-pointer"
             >
               + Add Person
             </button>

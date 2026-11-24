@@ -3,7 +3,7 @@
 ## Overview
 Relationship Intelligence AI implements a **Dual-Tier Hybrid AI Architecture** combining client-side on-device intelligence with Google Cloud Gemini models:
 
-1. **Tier 1 (Client-Side)**: Chrome Built-in Prompt API powered by Gemini Nano (`window.ai`). Provides offline, zero-network-latency processing where sensitive relationship reflections never leave the user's browser.
+1. **Tier 1 (Client-Side)**: Chrome Built-in Prompt API powered by Gemini Nano (`LanguageModel`). Provides offline, zero-network-latency processing where sensitive relationship reflections never leave the user's browser.
 2. **Tier 2 (Cloud)**: Google Gemini 2.5 Flash running via Firebase AI Logic / FastAPI backend. Handles deep reasoning, multi-branch consequence simulation, and full multi-turn conversational synthesis.
 
 ---
@@ -58,11 +58,11 @@ Click the blue **"Relaunch"** button at the bottom right of the flags page to re
 
 ## Failure Diagnostics & Automatic Recovery
 
-When on-device execution is requested but cannot proceed, `diagnoseLocalAIFailure` in `frontend/lib/hybrid-ai.ts` analyzes `window.ai` and returns a structured `LocalAIFailureReport`:
+When on-device execution is requested but cannot proceed, `diagnoseLocalAIFailure` in `frontend/lib/hybrid-ai.ts` analyzes `LanguageModel` availability and returns a structured `LocalAIFailureReport`:
 
 ```typescript
 export interface LocalAIFailureReport {
-  category: "browser_unsupported" | "flag_disabled" | "model_downloading" | "hardware_requirement" | "runtime_error" | "unknown";
+  category: "browser_unsupported" | "flag_disabled" | "model_downloading" | "model_downloadable" | "hardware_requirement" | "runtime_error" | "unknown";
   title: string;
   summary: string;
   technicalDetails: string;
@@ -75,9 +75,10 @@ export interface LocalAIFailureReport {
 
 | Category | Cause | Actionable Resolution |
 | :--- | :--- | :--- |
-| `flag_disabled` | `window.ai` is undefined. | Open `chrome://flags/#prompt-api` and set to `Enabled`. |
-| `model_downloading` | `capabilities().available === 'after-download'`. | Open `chrome://components` and click *Check for update* on *Optimization Guide*. |
-| `hardware_requirement` | `capabilities().available === 'no'`. | Open `chrome://flags/#optimization-guide-on-device-model` and set to `Enabled BypassPerfRequirement`. |
+| `flag_disabled` | `LanguageModel` is undefined in `self`. | Open `chrome://flags/#prompt-api` and set to `Enabled`. |
+| `model_downloadable` | `LanguageModel.availability()` returns `'after-download'` / `'downloadable'`. | Click 'Run Local Prompt Test' or check `chrome://components`. |
+| `model_downloading` | `LanguageModel.availability()` returns `'downloading'`. | Chrome is currently downloading model weights in the background. |
+| `hardware_requirement` | `LanguageModel.availability()` returns `'no'` / `'unavailable'`. | Open `chrome://flags/#optimization-guide-on-device-model` and set to `Enabled BypassPerfRequirement`. |
 | `browser_unsupported` | Browser is Firefox, Safari, Edge, or Chrome < 128. | Switch to Google Chrome 128+, or click *Switch to Cloud Gemini*. |
 
 ---

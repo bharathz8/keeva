@@ -14,20 +14,16 @@ import {
   CheckCircle2,
   AlertTriangle,
   Check,
-  ExternalLink,
-  ShieldAlert,
   Sliders,
   AlertCircle
 } from "lucide-react";
 import { 
-  detectHybridAICapabilities, 
   attemptOnDeviceAnalysis, 
   getDetailedLocalAIDiagnosis,
   diagnoseLocalAIFailure,
   getPreferredInferenceMode,
   setPreferredInferenceMode,
   InferenceMode,
-  HybridInferenceStatus,
   DetailedLocalAIDiagnostic,
   LocalAIFailureReport
 } from "@/lib/hybrid-ai";
@@ -40,14 +36,31 @@ interface Props {
   onModeChanged?: (mode: InferenceMode) => void;
 }
 
+interface CloudDiagnostic {
+  status?: string;
+  cloudGemini?: {
+    status?: string;
+    targetModel?: string;
+    latencyMs?: number;
+  };
+  memoryEngine?: {
+    projectId?: string;
+  };
+  error?: string;
+}
+
 export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onModeChanged }) => {
   const [mounted, setMounted] = useState(false);
   const [mode, setMode] = useState<InferenceMode>("hybrid");
-  const [localStatus, setLocalStatus] = useState<HybridInferenceStatus | null>(null);
   const [detailedDiag, setDetailedDiag] = useState<DetailedLocalAIDiagnostic | null>(null);
-  const [cloudDiag, setCloudDiag] = useState<any | null>(null);
+  const [cloudDiag, setCloudDiag] = useState<CloudDiagnostic | null>(null);
   const [testingLocal, setTestingLocal] = useState(false);
-  const [localTestResult, setLocalTestResult] = useState<{ success: boolean; text: string } | null>(null);
+  const [localTestResult, setLocalTestResult] = useState<{
+    success: boolean;
+    status: "ready" | "downloadable" | "downloading" | "unavailable" | "unsupported";
+    text: string;
+  } | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [localFailureReport, setLocalFailureReport] = useState<LocalAIFailureReport | null>(null);
   const [loadingCloud, setLoadingCloud] = useState(false);
 
@@ -67,11 +80,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
     setLocalTestResult(null);
 
     // 1. Check Local On-Device AI
-    const [loc, detailed] = await Promise.all([
-      detectHybridAICapabilities(),
-      getDetailedLocalAIDiagnosis()
-    ]);
-    setLocalStatus(loc);
+    const detailed = await getDetailedLocalAIDiagnosis();
     setDetailedDiag(detailed);
     if (detailed.modelAvailability !== "readily") {
       const report = await diagnoseLocalAIFailure(detailed.errorMessage);
@@ -84,10 +93,11 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
     try {
       const cloud = await getAIDiagnostics();
       setCloudDiag(cloud);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       setCloudDiag({
         status: "error",
-        error: err.message || "Failed to reach backend diagnostic endpoint."
+        error: errMsg || "Failed to reach backend diagnostic endpoint."
       });
     } finally {
       setLoadingCloud(false);
@@ -121,35 +131,83 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
     setTestingLocal(true);
     setLocalTestResult(null);
     setLocalFailureReport(null);
+    setDownloadProgress(null);
     try {
-      const res = await attemptOnDeviceAnalysis("Brief test: Analyze tone of 'We had an honest talk and resolved the tension.'");
+      const res = await attemptOnDeviceAnalysis(
+        "Brief test: Analyze tone of 'We had an honest talk and resolved the tension.'",
+        {
+          onDownloadProgress: (pct) => setDownloadProgress(pct)
+        }
+      );
+
       if (res.success) {
         setLocalTestResult({
           success: true,
-          text: `Local Gemini Nano verified: "${res.result}"`
+          status: "ready",
+          text: `✓ Prompt API detected (LanguageModel)\n✓ Local model available\n✓ Local inference ready\n\nVerified output: "${res.result}"`
         });
         setLocalFailureReport(null);
-      } else {
+      } else if (res.status === "downloadable") {
         setLocalTestResult({
           success: false,
-          text: res.error || "On-Device Prompt API is not ready on this machine."
+          status: "downloadable",
+          text: "✓ Prompt API detected (LanguageModel)\n↓ Local model needs to be downloaded before inference can run. Chrome components are queued."
         });
         if (res.failureReport) {
           setLocalFailureReport(res.failureReport);
         } else {
-          const report = await diagnoseLocalAIFailure(res.error);
+          const report = await diagnoseLocalAIFailure("The local model needs to be downloaded before it can run.");
+          setLocalFailureReport(report);
+        }
+      } else if (res.status === "downloading") {
+        setLocalTestResult({
+          success: false,
+          status: "downloading",
+          text: `✓ Prompt API detected (LanguageModel)\n⟳ Local model is currently downloading in Chrome${downloadProgress !== null ? ` (${downloadProgress}%)` : ""}.`
+        });
+        if (res.failureReport) {
+          setLocalFailureReport(res.failureReport);
+        } else {
+          const report = await diagnoseLocalAIFailure("The local model is currently downloading.");
+          setLocalFailureReport(report);
+        }
+      } else if (res.status === "unavailable") {
+        setLocalTestResult({
+          success: false,
+          status: "unavailable",
+          text: "✓ Prompt API detected (LanguageModel)\n✗ The Prompt API is available, but the local model isn't available on this device."
+        });
+        if (res.failureReport) {
+          setLocalFailureReport(res.failureReport);
+        } else {
+          const report = await diagnoseLocalAIFailure(res.error || "The local model isn't available on this device.");
+          setLocalFailureReport(report);
+        }
+      } else {
+        setLocalTestResult({
+          success: false,
+          status: "unsupported",
+          text: "✗ Prompt API unavailable: This browser does not expose the Chrome Prompt API (LanguageModel)."
+        });
+        if (res.failureReport) {
+          setLocalFailureReport(res.failureReport);
+        } else {
+          const report = await diagnoseLocalAIFailure(res.error || "Prompt API unavailable.");
           setLocalFailureReport(report);
         }
       }
-    } catch (e: any) {
-      const report = await diagnoseLocalAIFailure(e.message || String(e));
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      const report = await diagnoseLocalAIFailure(errorMsg);
       setLocalFailureReport(report);
       setLocalTestResult({
         success: false,
-        text: "Execution failed: " + (e.message || String(e))
+        status: "unavailable",
+        text: "Execution failed: " + errorMsg
       });
     } finally {
       setTestingLocal(false);
+      getDetailedLocalAIDiagnosis().then(setDetailedDiag);
     }
   };
 
@@ -284,14 +342,22 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                     ? "bg-emerald-50 text-emerald-800 border-emerald-300"
                     : detailedDiag?.modelAvailability === "after-download"
                     ? "bg-amber-50 text-amber-800 border-amber-300"
+                    : detailedDiag?.modelAvailability === "downloading"
+                    ? "bg-sky-50 text-sky-800 border-sky-300"
+                    : detailedDiag?.modelAvailability === "no"
+                    ? "bg-rose-50 text-rose-800 border-rose-300"
                     : "bg-stone-100 text-stone-600 border-stone-200"
                 }`}
               >
                 {detailedDiag?.modelAvailability === "readily" 
                   ? "Active (Local Nano Ready)" 
                   : detailedDiag?.modelAvailability === "after-download"
-                  ? "Downloading Components"
-                  : "Not Configured / Inactive"}
+                  ? "Needs Download (~1.5 GB)"
+                  : detailedDiag?.modelAvailability === "downloading"
+                  ? "Downloading Components..."
+                  : detailedDiag?.modelAvailability === "no"
+                  ? "Model Unavailable on Device"
+                  : "Prompt API Unsupported"}
               </span>
             </div>
 
@@ -314,7 +380,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                 type="button"
                 onClick={handleTestLocalPrompt}
                 disabled={testingLocal}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-stone-200 hover:border-stone-300 rounded-xl font-semibold text-stone-800 shadow-2xs transition-all hover:scale-101"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-stone-200 hover:border-stone-300 rounded-xl font-semibold text-stone-800 shadow-2xs transition-all hover:scale-101 cursor-pointer"
               >
                 {testingLocal ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-stone-600" />
@@ -323,28 +389,50 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                 )}
                 <span>Run Local Prompt Test</span>
               </button>
-              <span className="text-[10px] text-stone-400">Target: window.ai.languageModel</span>
+              <span className="text-[10px] text-stone-400">Target: LanguageModel</span>
             </div>
 
             {/* Local Test Output */}
             {localTestResult && (
-              <div className={`p-3 rounded-xl border text-[11px] leading-relaxed shadow-2xs ${
+              <div className={`p-3.5 rounded-xl border text-[11px] leading-relaxed shadow-2xs ${
                 localTestResult.success 
-                  ? "bg-emerald-50/80 border-emerald-300 text-emerald-950"
+                  ? "bg-emerald-50/90 border-emerald-300 text-emerald-950"
+                  : localTestResult.status === "downloadable" || localTestResult.status === "downloading"
+                  ? "bg-amber-50/90 border-amber-300 text-amber-950"
                   : "bg-red-50 border-red-200 text-red-900"
               }`}>
-                <div className="font-bold mb-0.5">
-                  {localTestResult.success ? "✓ Local Test Passed" : "⚠️ Local Test Failed"}
+                <div className="font-bold mb-1.5 flex items-center gap-1.5 text-xs">
+                  {localTestResult.success ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>✓ Local Prompt Test Passed</span>
+                    </>
+                  ) : localTestResult.status === "downloading" ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
+                      <span>Local AI Model is Downloading...</span>
+                    </>
+                  ) : localTestResult.status === "downloadable" ? (
+                    <>
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Local AI Model Needs to be Downloaded</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                      <span>Local Prompt Test Unavailable</span>
+                    </>
+                  )}
                 </div>
-                <div>{localTestResult.text}</div>
+                <div className="whitespace-pre-line font-mono text-[10.5px] leading-relaxed">{localTestResult.text}</div>
                 {!localTestResult.success && mode === "on-device" && (
-                  <div className="pt-2">
+                  <div className="pt-2.5">
                     <button
                       type="button"
                       onClick={() => handleSelectMode("hybrid")}
-                      className="px-2.5 py-1 bg-amber-600 text-white rounded-lg text-[10px] font-bold hover:bg-amber-700 transition-colors shadow-2xs"
+                      className="px-2.5 py-1 bg-amber-600 text-white rounded-lg text-[10px] font-bold hover:bg-amber-700 transition-colors shadow-2xs cursor-pointer"
                     >
-                      Switch to Auto (Hybrid) to continue uninterrupted
+                      Switch to Auto (Hybrid) to continue with Cloud Gemini
                     </button>
                   </div>
                 )}

@@ -125,7 +125,7 @@ When using Keeva in public environments (cafes, transit, open offices), onlooker
 Keeva gives you explicit control over where and how your prompts are processed:
 
 1. **⚡ Auto (Hybrid)** (*Recommended*): Uses on-device Gemini Nano if ready; smoothly falls back to Cloud Gemini without interruption.
-2. **💻 On-Device Only**: Prompts run 100% locally in Chrome via the Prompt API (`window.ai`). Prompts never leave your computer.
+2. **💻 On-Device Only**: Prompts run 100% locally in Chrome via the Prompt API (`LanguageModel`). Prompts never leave your computer.
 3. **☁️ Cloud Gemini Only**: Direct cloud execution via Google Gemini 2.5 Flash on Firebase AI logic.
 
 ### Live Diagnostic Troubleshooting & 1-Click Fallback
