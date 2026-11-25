@@ -77,7 +77,7 @@ export const AuthModal: React.FC<Props> = ({
     } catch (err: any) {
       const msg = err?.message || "";
       if (err?.code === "auth/api-key-not-valid" || msg.includes("api-key-not-valid")) {
-        setError("Firebase API key is missing or invalid in frontend/.env.local.");
+        setError("Sign-in service is temporarily unavailable. Please try again later.");
       } else {
         setError(msg || "Google sign-in failed. Please try again.");
       }
@@ -121,7 +121,7 @@ export const AuthModal: React.FC<Props> = ({
     } catch (err: any) {
       const msg = err?.message || "Authentication failed.";
       if (err?.code === "auth/api-key-not-valid" || msg.includes("api-key-not-valid")) {
-        setError("Firebase API key is missing or invalid in frontend/.env.local.");
+        setError("Sign-in service is temporarily unavailable. Please try again later.");
       } else if (msg.includes("user-not-found") || msg.includes("wrong-password") || msg.includes("invalid-credential")) {
         setError("Invalid email or password.");
       } else if (msg.includes("email-already-in-use")) {
@@ -160,7 +160,7 @@ export const AuthModal: React.FC<Props> = ({
                     : "Create Your Account"}
               </h3>
               <p className="text-[11px] text-stone-500 mt-0.5">
-                Isolated relationship intelligence & Mem0 memory
+                Private &amp; personal relationship space
               </p>
             </div>
           </div>
@@ -196,16 +196,10 @@ export const AuthModal: React.FC<Props> = ({
 
                 <div className="pt-2 border-t border-stone-200/70 space-y-1.5 text-[11px]">
                   <div className="flex items-center justify-between text-stone-600">
-                    <span className="font-semibold">User ID (UID):</span>
-                    <code className="bg-stone-100 px-2 py-0.5 rounded text-[10px] font-mono text-stone-800 select-all">
-                      {user.uid.slice(0, 16)}...
-                    </code>
-                  </div>
-                  <div className="flex items-center justify-between text-stone-600">
-                    <span className="font-semibold">Memory Isolation:</span>
+                    <span className="font-semibold">Account Privacy:</span>
                     <span className="text-emerald-700 font-bold flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" />
-                      Isolated to your UID
+                      Private to your account
                     </span>
                   </div>
                 </div>
@@ -214,10 +208,10 @@ export const AuthModal: React.FC<Props> = ({
               <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-[11px] text-emerald-900 space-y-1">
                 <div className="font-bold flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                  <span>Strict Per-User Mem0 Isolation</span>
+                  <span>Private Account Protection</span>
                 </div>
                 <p className="text-emerald-800 leading-relaxed font-normal">
-                  All your tracked people, conflict patterns, and Mem0 semantic vectors are scoped strictly to your account UID ({user.uid.slice(0, 8)}). No other user can query or see your data.
+                  All your tracked people, relationship notes, and history belong strictly to your personal account. No one else can view or access your data.
                 </p>
               </div>
 
@@ -393,10 +387,10 @@ export const AuthModal: React.FC<Props> = ({
               <div className="p-3 bg-stone-50 border border-stone-200/80 rounded-2xl text-[10px] text-stone-600 space-y-1">
                 <span className="font-bold text-stone-900 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Strict Mem0 Isolation Guarantee</span>
+                  <span>Private Account Guarantee</span>
                 </span>
                 <p className="leading-snug">
-                  Every relationship profile, event, and Mem0 semantic observation is linked exclusively to your authenticated <code className="font-mono text-stone-800">user_id</code>. Your data is never shared across users or exposed to others.
+                  Every relationship profile, event, and reflection is linked exclusively to your personal account. Your data is never shared with anyone else.
                 </p>
               </div>
             </>

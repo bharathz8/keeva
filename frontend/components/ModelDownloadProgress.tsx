@@ -66,15 +66,15 @@ export const ModelDownloadProgress: React.FC<ModelDownloadProgressProps> = ({
           </div>
           <div className="min-w-0">
             <h4 className="font-extrabold text-stone-900 text-xs sm:text-sm leading-tight flex items-center gap-1.5 truncate">
-              <span>{isComplete ? "Local AI Model Ready" : "Downloading Gemini Nano Model"}</span>
+              <span>{isComplete ? "Local AI Model Ready" : "Downloading Local AI Model"}</span>
               {isComplete && <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
             </h4>
             <p className="text-[11px] text-stone-500 mt-0.5 leading-snug truncate">
               {isComplete
-                ? "Weights loaded into Chrome memory for 100% on-device inference."
+                ? "Local AI is loaded and ready for private offline use."
                 : error
-                ? "Download interrupted or waiting for Chrome components."
-                : "Streaming weights (~1.5 GB) directly to local Chrome cache."}
+                ? "Download paused or waiting for browser setup."
+                : "Downloading (~1.5 GB) for private offline use."}
             </p>
           </div>
         </div>

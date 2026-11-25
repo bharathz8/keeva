@@ -143,7 +143,7 @@ export default function AgentPage() {
         const errorMsg: ChatMessage = {
           id: `err_local_${Date.now()}`,
           sender: "agent",
-          text: `On-Device Gemini Nano is not ready on this machine.`,
+          text: `Local on-device AI is not ready on this device.`,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           failureReport: report,
           pendingTextToRetry: textToSend.trim()
@@ -194,11 +194,11 @@ export default function AgentPage() {
       }
     } catch (err: any) {
       if (inferenceMode === "on-device") {
-        const report = await diagnoseLocalAIFailure(err?.message || "Local Gemini Nano runtime error.");
+        const report = await diagnoseLocalAIFailure(err?.message || "Local AI could not run.");
         const errorMsg: ChatMessage = {
           id: `err_local_${Date.now()}`,
           sender: "agent",
-          text: `Local Gemini Nano execution failed.`,
+          text: `Local on-device AI could not run.`,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           failureReport: report,
           pendingTextToRetry: textToSend.trim()
@@ -264,7 +264,7 @@ export default function AgentPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-950 bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-200/70">
-              LangGraph Reasoning Engine
+              Relationship Reasoning Companion
             </span>
             <span className="text-xs text-stone-500 font-semibold">
               Hybrid Memory Active
@@ -281,7 +281,7 @@ export default function AgentPage() {
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Inference Mode Selector */}
           <div className="flex items-center gap-1.5 bg-stone-50 px-2.5 py-1.5 rounded-xl border border-stone-200/80 shrink-0">
-            <label htmlFor="inference-mode-select" className="text-[11px] font-semibold text-stone-600">Inference:</label>
+            <label htmlFor="inference-mode-select" className="text-[11px] font-semibold text-stone-600">AI Mode:</label>
             <select
               id="inference-mode-select"
               aria-label="Inference Mode"
@@ -439,7 +439,7 @@ export default function AgentPage() {
                           <p>{msg.text}</p>
                           <div className="mt-3 pt-2.5 border-t border-stone-200/50 flex items-center justify-between text-[10px] text-stone-400 font-medium">
                             <span>
-                              Inference: {msg.agentResponse?.inferenceSource || "cloud-gemini"}
+                              {msg.agentResponse?.inferenceSource === "on-device" ? "On-Device AI" : "Cloud AI"}
                             </span>
                             <span>{msg.timestamp}</span>
                           </div>

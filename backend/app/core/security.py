@@ -59,49 +59,41 @@ async def verify_firebase_token(authorization: Optional[str] = Header(None)) -> 
         )
     
     token = parts[1]
-    
-    # 1. Real Firebase Token Verification
-    if _firebase_initialized:
-        try:
-            from firebase_admin import auth
-            decoded_token = auth.verify_id_token(token)
-            uid = decoded_token.get("uid")
-            if uid:
-                return {
-                    "uid": uid,
-                    "email": decoded_token.get("email", ""),
-                    "name": decoded_token.get("name", "User"),
-                    "auth_provider": "firebase"
-                }
-        except Exception as e:
-            logger.debug(f"Firebase ID token verification failed: {e}")
-            if not settings.USE_MOCK_AUTH_IN_DEV:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=f"Invalid Firebase ID token: {str(e)}",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-    
-    # 2. Development / Demo Mode Token Support
-    # Enables offline testing and hackathon demo runs
-    if settings.USE_MOCK_AUTH_IN_DEV:
-        if token.startswith("demo-") or token == "demo-user-123" or token.startswith("user_"):
+    if not token or token in ("null", "undefined"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid JWT token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Strict Firebase JWT Token Verification
+    if not _firebase_initialized:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service is not configured",
+        )
+
+    try:
+        from firebase_admin import auth
+        decoded_token = auth.verify_id_token(token)
+        uid = decoded_token.get("uid")
+        if uid:
             return {
-                "uid": token,
-                "email": f"{token}@relationship-intelligence.local",
-                "name": "Demo User",
-                "auth_provider": "demo_local"
+                "uid": uid,
+                "email": decoded_token.get("email", ""),
+                "name": decoded_token.get("name", "User"),
+                "auth_provider": "firebase"
             }
-        # If frontend passes any custom string in dev mode:
-        return {
-            "uid": token if len(token) < 128 else f"user_{token[:16]}",
-            "email": "user@relationship-intelligence.local",
-            "name": "Authenticated User",
-            "auth_provider": "dev_token"
-        }
-    
+    except Exception as e:
+        logger.debug(f"Firebase ID token verification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired JWT token. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Unauthorized: Unable to verify Firebase token",
+        detail="Unauthorized: Unable to verify JWT token",
         headers={"WWW-Authenticate": "Bearer"},
     )

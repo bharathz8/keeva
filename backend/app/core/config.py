@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # Firebase
     FIREBASE_PROJECT_ID: str = "keeva-relationship-ai"
     FIREBASE_SERVICE_ACCOUNT_PATH: str = ""
-    USE_MOCK_AUTH_IN_DEV: bool = True  # Allows smooth hackathon demo / local testing if Firebase Admin credentials are not locally provisioned
+    USE_MOCK_AUTH_IN_DEV: bool = False  # Strict JWT verification enforced
     
     # AI & Memory
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")

@@ -62,6 +62,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      currentAuthToken = null;
+    }
     let errorDetail = "API Request failed";
     try {
       const errJson = await response.json();

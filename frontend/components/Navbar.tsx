@@ -131,7 +131,7 @@ export const Navbar: React.FC = () => {
                     onClick={() => openAuthModal("signin")}
                     className="flex items-center gap-1.5 px-2 py-1 rounded-xl hover:bg-stone-100 transition-colors cursor-pointer group"
                     aria-label="User Account Settings"
-                    title={`Signed in as ${user.displayName || user.email} (${user.uid}). Click to view profile / Mem0 isolation.`}
+                    title={`Signed in as ${user.displayName || user.email}. Click to view your account.`}
                   >
                     <div className="w-7 h-7 rounded-xl bg-stone-900 text-amber-300 font-bold flex items-center justify-center text-xs shadow-2xs group-hover:scale-105 transition-transform">
                       {user.displayName ? user.displayName[0].toUpperCase() : "U"}

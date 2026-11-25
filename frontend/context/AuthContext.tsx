@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { 
   User, 
-  onAuthStateChanged, 
+  onIdTokenChanged, 
   signInWithPopup, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -20,6 +20,7 @@ interface AuthUser {
 
 interface AuthContextType {
   user: AuthUser | null;
+  token: string | null;
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
@@ -33,6 +34,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  token: null,
   loading: true,
   loginWithGoogle: async () => {},
   loginWithEmail: async () => {},
@@ -46,6 +48,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">("signin");
@@ -67,23 +70,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
+      const unsubscribe = onIdTokenChanged(auth, async (firebaseUser: User | null) => {
         if (firebaseUser) {
           try {
-            const token = await firebaseUser.getIdToken();
-            setApiAuthToken(token);
+            const idToken = await firebaseUser.getIdToken();
+            if (!idToken) {
+              throw new Error("Empty JWT token");
+            }
+            setApiAuthToken(idToken);
+            setToken(idToken);
             setUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
             });
           } catch (tokenErr) {
-            console.warn("Error retrieving Firebase token:", tokenErr);
+            console.warn("Error retrieving Firebase JWT token:", tokenErr);
             setUser(null);
+            setToken(null);
             setApiAuthToken(null);
           }
         } else {
           setUser(null);
+          setToken(null);
           setApiAuthToken(null);
         }
         setLoading(false);
@@ -93,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.warn("Firebase auth listener error:", err);
       setUser(null);
+      setToken(null);
       setApiAuthToken(null);
       setLoading(false);
     }
@@ -101,8 +111,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithGoogle = async () => {
     try {
       const res = await signInWithPopup(auth, googleProvider);
-      const token = await res.user.getIdToken();
-      setApiAuthToken(token);
+      const idToken = await res.user.getIdToken();
+      setApiAuthToken(idToken);
+      setToken(idToken);
     } catch (err: any) {
       console.warn("Firebase Google login error:", err);
       throw err;
@@ -112,8 +123,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithEmail = async (email: string, pass: string) => {
     try {
       const res = await signInWithEmailAndPassword(auth, email, pass);
-      const token = await res.user.getIdToken();
-      setApiAuthToken(token);
+      const idToken = await res.user.getIdToken();
+      setApiAuthToken(idToken);
+      setToken(idToken);
     } catch (err: any) {
       console.warn("Firebase email login error:", err);
       throw err;
@@ -123,8 +135,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signupWithEmail = async (email: string, pass: string) => {
     try {
       const res = await createUserWithEmailAndPassword(auth, email, pass);
-      const token = await res.user.getIdToken();
-      setApiAuthToken(token);
+      const idToken = await res.user.getIdToken();
+      setApiAuthToken(idToken);
+      setToken(idToken);
     } catch (err: any) {
       console.warn("Firebase signup error:", err);
       throw err;
@@ -138,6 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn("Sign out error:", err);
     }
     setUser(null);
+    setToken(null);
     setApiAuthToken(null);
   };
 
@@ -145,6 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
+        token,
         loading,
         loginWithGoogle,
         loginWithEmail,

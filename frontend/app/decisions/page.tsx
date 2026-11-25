@@ -277,7 +277,7 @@ export default function DecisionsPage() {
                   </div>
                   <p className="text-emerald-900 leading-relaxed font-medium">{dec.outcome}</p>
                   <span className="text-[10px] text-emerald-700 block font-semibold pt-1">
-                    ✓ Stored into Mem0 semantic long-term memory to inform future relationship reasoning.
+                    ✓ Saved to your long-term relationship memory to help guide future reflections.
                   </span>
                 </div>
               ) : (
@@ -367,7 +367,7 @@ export default function DecisionsPage() {
               </div>
 
               <div className="text-[11px] text-stone-500 leading-relaxed bg-stone-50/80 p-3 rounded-2xl border border-stone-200/70">
-                This outcome will be saved in your longitudinal relationship memory (Mem0) so that future relationship reasoning benefits from your actual experiences.
+                This outcome will be saved in your long-term relationship memory so future reflections learn from your actual experiences.
               </div>
             </form>
 

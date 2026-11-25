@@ -186,14 +186,14 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
         setLocalTestResult({
           success: true,
           status: "ready",
-          text: `✓ Prompt API detected (LanguageModel)\n✓ Local model available\n✓ Local inference ready\n\nVerified output: "${res.result}"`
+          text: `✓ On-device AI detected\n✓ Local model ready\n\nTest response: "${res.result}"`
         });
         setLocalFailureReport(null);
       } else if (res.status === "downloadable") {
         setLocalTestResult({
           success: false,
           status: "downloadable",
-          text: "✓ Prompt API detected (LanguageModel)\n↓ Local model needs to be downloaded before inference can run. Chrome components are queued."
+          text: "✓ Browser AI supported\n↓ Local AI model needs to be downloaded before it can run."
         });
         if (res.failureReport) {
           setLocalFailureReport(res.failureReport);
@@ -205,7 +205,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
         setLocalTestResult({
           success: false,
           status: "downloading",
-          text: `✓ Prompt API detected (LanguageModel)\n⟳ Local model is currently downloading in Chrome${downloadProgress !== null ? ` (${downloadProgress}%)` : ""}.`
+          text: `✓ Browser AI supported\n⟳ Local AI model is currently downloading${downloadProgress !== null ? ` (${downloadProgress}%)` : ""}.`
         });
         if (res.failureReport) {
           setLocalFailureReport(res.failureReport);
@@ -217,7 +217,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
         setLocalTestResult({
           success: false,
           status: "unavailable",
-          text: "✓ Prompt API detected (LanguageModel)\n✗ The Prompt API is available, but the local model isn't available on this device."
+          text: "✓ Browser AI supported\n✗ On-device AI is not available on this device."
         });
         if (res.failureReport) {
           setLocalFailureReport(res.failureReport);
@@ -229,12 +229,12 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
         setLocalTestResult({
           success: false,
           status: "unsupported",
-          text: "✗ Prompt API unavailable: This browser does not expose the Chrome Prompt API (LanguageModel)."
+          text: "✗ On-device AI is not supported in this browser."
         });
         if (res.failureReport) {
           setLocalFailureReport(res.failureReport);
         } else {
-          const report = await diagnoseLocalAIFailure(res.error || "Prompt API unavailable.");
+          const report = await diagnoseLocalAIFailure(res.error || "On-device AI unavailable.");
           setLocalFailureReport(report);
         }
       }
@@ -274,10 +274,10 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
             </div>
             <div>
               <h3 className="font-bold text-stone-900 text-base leading-tight">
-                AI Inference Engine & Connection Control
+                AI Mode &amp; Connection Settings
               </h3>
               <p className="text-xs text-stone-500 mt-0.5">
-                Choose Local On-Device vs. Cloud Gemini with live connection verification
+                Choose between On-Device AI or Cloud AI
               </p>
             </div>
           </div>
@@ -298,7 +298,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
                 <Sliders className="w-4 h-4 text-stone-700" />
-                <span>Your Selected Inference Preference</span>
+                <span>Your Preferred AI Mode</span>
               </label>
               <span className="text-[10px] text-stone-500 font-medium">Saved in browser</span>
             </div>
@@ -320,7 +320,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                   {mode === "hybrid" && <Check className="w-4 h-4 text-amber-600" />}
                 </div>
                 <p className="text-[10px] text-stone-500 mt-1 leading-snug font-normal">
-                  Recommended. Uses local Gemini Nano if ready, otherwise Cloud Gemini seamlessly.
+                  Recommended. Uses private on-device AI when ready, or Cloud AI automatically.
                 </p>
               </button>
 
@@ -344,7 +344,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                 </p>
               </button>
 
-              {/* Option 3: Cloud Gemini Only */}
+              {/* Option 3: Cloud AI Only */}
               <button
                 type="button"
                 onClick={() => handleSelectMode("cloud")}
@@ -355,24 +355,24 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs flex items-center gap-1">
-                    <span>☁️ Cloud Gemini Only</span>
+                    <span>☁️ Cloud AI Only</span>
                   </span>
                   {mode === "cloud" && <Check className="w-4 h-4 text-blue-600" />}
                 </div>
                 <p className="text-[10px] text-stone-500 mt-1 leading-snug font-normal">
-                  Direct cloud execution. Always uses Gemini 2.5 Flash via Firebase AI logic.
+                  Fast cloud processing. Works smoothly on every device.
                 </p>
               </button>
             </div>
           </div>
 
-          {/* 1. TIER 1: LOCAL ON-DEVICE MODEL STATUS & DIAGNOSTICS */}
+          {/* 1. ON-DEVICE AI STATUS */}
           <div className="p-4 rounded-2xl border border-stone-200 bg-stone-50/80 space-y-3 shadow-2xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-emerald-600" />
                 <span className="font-bold text-stone-900 text-xs">
-                  Tier 1: On-Device AI (Chrome Built-in Prompt API)
+                  On-Device AI (Private Browser Mode)
                 </span>
               </div>
               <span
@@ -388,14 +388,14 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                   }`}
               >
                 {detailedDiag?.modelAvailability === "readily"
-                  ? "Active (Local Nano Ready)"
+                  ? "Ready"
                   : detailedDiag?.modelAvailability === "after-download"
                     ? "Needs Download (~1.5 GB)"
                     : detailedDiag?.modelAvailability === "downloading"
-                      ? "Downloading Components..."
+                      ? "Downloading..."
                       : detailedDiag?.modelAvailability === "no"
-                        ? "Model Unavailable on Device"
-                        : "Prompt API Unsupported"}
+                        ? "Not Available on Device"
+                        : "Not Supported on Browser"}
               </span>
             </div>
 
@@ -409,7 +409,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
             ) : detailedDiag?.modelAvailability === "readily" ? (
               <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center gap-2 text-emerald-900 text-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>On-device Gemini Nano is fully loaded and ready for zero-latency local execution.</span>
+                <span>On-device AI is loaded and ready for private, offline use.</span>
               </div>
             ) : null}
 
@@ -418,14 +418,14 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
               (testingLocal && downloadProgress !== null) ||
               detailedDiag?.modelAvailability === "downloading" ||
               localTestResult?.status === "downloading") && (
-              <ModelDownloadProgress
-                progress={downloadProgress}
-                loadedBytes={downloadBytes?.loaded}
-                totalBytes={downloadBytes?.total}
-                isDownloading={true}
-                isComplete={detailedDiag?.modelAvailability === "readily"}
-              />
-            )}
+                <ModelDownloadProgress
+                  progress={downloadProgress}
+                  loadedBytes={downloadBytes?.loaded}
+                  totalBytes={downloadBytes?.total}
+                  isDownloading={true}
+                  isComplete={detailedDiag?.modelAvailability === "readily"}
+                />
+              )}
 
             <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap">
@@ -440,7 +440,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                   ) : (
                     <Zap className="w-3.5 h-3.5 text-amber-500" />
                   )}
-                  <span>Run Local Prompt Test</span>
+                  <span>Test On-Device AI</span>
                 </button>
 
                 {detailedDiag?.modelAvailability === "after-download" && (
@@ -459,7 +459,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                   </button>
                 )}
               </div>
-              <span className="text-[10px] text-stone-400">Target: LanguageModel</span>
+              <span className="text-[10px] text-stone-400">Browser Built-in AI</span>
             </div>
 
             {/* Local Test Output */}
@@ -474,7 +474,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                   {localTestResult.success ? (
                     <>
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>✓ Local Prompt Test Passed</span>
+                      <span>✓ On-Device AI Test Passed</span>
                     </>
                   ) : localTestResult.status === "downloading" ? (
                     <>
@@ -489,11 +489,11 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                   ) : (
                     <>
                       <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                      <span>Local Prompt Test Unavailable</span>
+                      <span>On-Device AI Unavailable</span>
                     </>
                   )}
                 </div>
-                <div className="whitespace-pre-line font-mono text-[10.5px] leading-relaxed">{localTestResult.text}</div>
+                <div className="whitespace-pre-line font-sans text-[11px] leading-relaxed">{localTestResult.text}</div>
                 {!localTestResult.success && mode === "on-device" && (
                   <div className="pt-2.5">
                     <button
@@ -501,7 +501,7 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                       onClick={() => handleSelectMode("hybrid")}
                       className="px-2.5 py-1 bg-amber-600 text-white rounded-lg text-[10px] font-bold hover:bg-amber-700 transition-colors shadow-2xs cursor-pointer"
                     >
-                      Switch to Auto (Hybrid) to continue with Cloud Gemini
+                      Switch to Auto Mode to continue with Cloud AI
                     </button>
                   </div>
                 )}
@@ -509,13 +509,13 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
             )}
           </div>
 
-          {/* 2. TIER 2: CLOUD GEMINI INFERENCE */}
+          {/* 2. TIER 2: CLOUD AI */}
           <div className="p-4 rounded-2xl border border-stone-200 bg-stone-50/80 space-y-3 shadow-2xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Cloud className="w-4 h-4 text-blue-600" />
                 <span className="font-bold text-stone-900 text-xs">
-                  Tier 2: Cloud Gemini (Firebase AI Logic Layer)
+                  Cloud AI
                 </span>
               </div>
               <span
@@ -524,60 +524,57 @@ export const HybridDiagnosticModal: React.FC<Props> = ({ isOpen, onClose, onMode
                   : "bg-amber-50 text-amber-800 border-amber-300"
                   }`}
               >
-                {cloudDiag?.cloudGemini?.status || "Live-Connected"}
+                {cloudDiag?.cloudGemini?.status === "live-connected" ? "Connected" : "Ready"}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
               <div className="p-2.5 bg-white rounded-xl border border-stone-200/90">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">
-                  Target Cloud Model
+                  Cloud Service
                 </span>
                 <span className="font-bold text-stone-800">
-                  {cloudDiag?.cloudGemini?.targetModel || "gemini-2.5-flash"}
+                  Keeva Cloud AI
                 </span>
               </div>
               <div className="p-2.5 bg-white rounded-xl border border-stone-200/90">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">
-                  API Response Time
+                  Response Speed
                 </span>
                 <span className="font-bold text-stone-800">
-                  {cloudDiag?.cloudGemini?.latencyMs ? `${cloudDiag.cloudGemini.latencyMs} ms` : "Verified (<1s)"}
+                  {cloudDiag?.cloudGemini?.latencyMs ? `${cloudDiag.cloudGemini.latencyMs} ms` : "Fast (<1s)"}
                 </span>
               </div>
             </div>
 
             <p className="text-[11px] text-stone-600 leading-relaxed">
-              When On-Device mode is unavailable or when Cloud Gemini mode is active, the system routes requests to Google Gemini 2.5 Flash via Firebase AI Logic seamlessly.
+              When On-Device AI is unavailable or Cloud AI mode is active, your requests are handled securely by Cloud AI.
             </p>
           </div>
 
-          {/* 3. FIREBASE & MEM0 MEMORY ENGINES */}
+          {/* 3. DATA & MEMORY */}
           <div className="p-4 rounded-2xl border border-stone-200 bg-stone-50/80 space-y-2.5 shadow-2xs">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-amber-600" />
               <span className="font-bold text-stone-900 text-xs">
-                Data & Memory Architecture
+                Data &amp; Memory Storage
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
               <div className="p-2.5 bg-white rounded-xl border border-stone-200/90">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">
-                  Structured State
+                  Profiles &amp; Timelines
                 </span>
-                <span className="font-bold text-stone-800">Google Cloud Firestore</span>
-                <span className="text-[10px] text-stone-400 block mt-0.5">
-                  Project: {cloudDiag?.memoryEngine?.projectId || "keeva-f2906"}
-                </span>
+                <span className="font-bold text-stone-800">Encrypted Cloud Storage</span>
               </div>
               <div className="p-2.5 bg-white rounded-xl border border-stone-200/90">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">
-                  Semantic Long-Term Store
+                  Long-Term Memory
                 </span>
-                <span className="font-bold text-stone-800">Mem0 Memory Engine</span>
+                <span className="font-bold text-stone-800">Relationship Memory</span>
                 <span className="text-[10px] text-stone-400 block mt-0.5">
-                  Vector-indexed observations
+                  Contextual reflections &amp; patterns
                 </span>
               </div>
             </div>

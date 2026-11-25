@@ -672,7 +672,7 @@ export default function PersonProfilePage() {
               <span>Ask Relationship AI about {displayName}</span>
             </h3>
             <p className="text-xs text-stone-500 mt-0.5">
-              Reason over recorded timeline events, context observations, and Mem0 semantic history.
+              Reflect on recorded timeline events, observations, and relationship history.
             </p>
           </div>
 

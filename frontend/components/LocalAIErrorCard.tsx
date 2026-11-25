@@ -79,7 +79,7 @@ export const LocalAIErrorCard: React.FC<Props> = ({
   const getCategoryBadge = () => {
     switch (report.category) {
       case "flag_disabled":
-        return { label: "Prompt API Disabled", color: "bg-rose-100 text-rose-900 border-rose-300" };
+        return { label: "Browser AI Not Enabled", color: "bg-rose-100 text-rose-900 border-rose-300" };
       case "model_downloadable":
         return { label: "Model Needs Download (~1.5 GB)", color: "bg-amber-100 text-amber-900 border-amber-300" };
       case "model_downloading":
@@ -202,7 +202,7 @@ export const LocalAIErrorCard: React.FC<Props> = ({
       {/* Immediate Fallback Actions */}
       <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-amber-200/70">
         <div className="text-[11px] text-amber-950 font-medium">
-          💡 You don't have to wait: <strong>Cloud Gemini 2.5 Flash</strong> is live and can answer immediately.
+          💡 You don&apos;t have to wait: <strong>Cloud AI</strong> is ready and can answer immediately.
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {report.category === "model_downloadable" && !downloadInfo?.isComplete && (
@@ -242,7 +242,7 @@ export const LocalAIErrorCard: React.FC<Props> = ({
               className="px-3.5 py-1.5 bg-stone-900 hover:bg-stone-800 text-stone-50 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all hover:scale-101"
             >
               <Cloud className="w-3.5 h-3.5 text-blue-300" />
-              <span>Switch to Cloud Gemini & Proceed</span>
+              <span>Switch to Cloud AI &amp; Continue</span>
               <ArrowRight className="w-3 h-3 text-amber-300" />
             </button>
           )}
